@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prono Foot IA</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#12a150"><link rel="icon" href="icon-512.png">
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--tx:#14201a;--mu:#66736b;--ac:#12a150;--bd:#dfe5e1;--w:#e8f7ee;--fun:#b7791f;--funbg:#fdf3e0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1511;--card:#17211b;--tx:#eaf2ed;--mu:#93a39a;--ac:#2ecc71;--bd:#27342c;--w:#1b3326;--fun:#f0b44c;--funbg:#33270f}}
+:root[data-theme="dark"]{--bg:#0e1511;--card:#17211b;--tx:#eaf2ed;--mu:#93a39a;--ac:#2ecc71;--bd:#27342c;--w:#1b3326;--fun:#f0b44c;--funbg:#33270f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}.mu{color:var(--mu);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+.tip{background:var(--w);border:2px solid var(--ac)}.fun{background:var(--funbg);border:2px solid var(--fun)}
+.lg{font-size:12px;color:var(--mu)}.t{font-weight:600;margin:2px 0 8px}
+.g,.g2{display:grid;gap:6px;text-align:center}.g{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr;margin-top:6px}
+.b{border:1px solid var(--bd);border-radius:10px;padding:6px 2px;font-size:12px;color:var(--mu)}.b.on{background:var(--w);border-color:var(--ac)}
+.b b{display:block;font-size:17px;color:var(--tx)}
+.l{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:6px 0;border-top:1px solid var(--bd)}.l span:last-child{color:var(--mu);white-space:nowrap}
+.tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;font-size:13px;color:var(--mu)}.tot b{font-size:20px;color:var(--tx)}
+h2{font-size:13px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 0}
+</style></head><body><main>
+<h1>⚽ Pronos du jour</h1>
+<p class="mu" id="d"></p>
+<div id="app"></div>
+<p class="mu">Estimations indicatives, sans garantie de gain. Jouer comporte des risques : endettement, isolement… Réservé aux +18 ans. Aide : 09 74 75 13 13.</p>
+</main>
+<script src="data.js"></script>
+<script>
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+
+function chk(m){if(!m.r)return null;const [a,b]=m.r,o=[['1',m.p1],['N',m.pN],['2',m.p2]].sort((x,y)=>y[1]-x[1])[0][0],real=a>b?'1':a==b?'N':'2';return{s:a+'-'+b,r:o==real,b:(m.btts>=.5)==(a>0&&b>0)}}
+function status(m){const c=chk(m);return c?'Score final '+c.s+' · Résultat : '+(c.r?'✅ gagné':'❌ perdu')+' · Les 2 marquent : '+(c.b?'✅ gagné':'❌ perdu'):'⏳ Match à venir : résultat ajouté après le match'}
+function bilan(){let w=0,l=0;M.forEach(m=>{const c=chk(m);if(c)[c.r,c.b].forEach(x=>x?w++:l++)});return w+l?'Bilan : '+w+' gagnés / '+l+' perdus':'Bilan : aucun match terminé'}
+const pc=x=>Math.round(x*100)+'%',el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h)e.innerHTML=h;return e};
+const nm=m=>m.home+' – '+m.away;
+function legSafe(m){const o=[['1',m.p1],['N',m.pN],['2',m.p2]].sort((a,b)=>b[1]-a[1])[0];
+ if(o[1]>=.6)return{m:nm(m),l:o[0]=='1'?m.home+' gagne':o[0]=='2'?m.away+' gagne':'Match nul',p:o[1]};
+ const d=[['pas de nul',m.p1+m.p2],[m.home+' ou nul',m.p1+m.pN],[m.away+' ou nul',m.pN+m.p2]].sort((a,b)=>b[1]-a[1])[0];return{m:nm(m),l:d[0],p:d[1]}}
+function legFun(m){const c=[[m.home+' gagne',m.p1],['Match nul',m.pN],[m.away+' gagne',m.p2],['Les 2 marquent',m.btts],['Moins de 2 équipes marquent',1-m.btts]].sort((a,b)=>b[1]-a[1])[0];return{m:nm(m),l:c[0],p:c[1]}}
+function isOpen(m){if(m.r)return false;const [H,I]=m.h.split(':'),n=new Date();return n.getHours()*60+n.getMinutes()<+H*60+ +I}
+const OPEN=M.filter(isOpen);
+function combo(f,n,mx){const l=OPEN.map(f).filter(x=>x.p<=mx).sort((a,b)=>b.p-a.p).slice(0,n);return{l,p:l.reduce((a,x)=>a*x.p,1)}}
+const A=document.getElementById('app');
+if(!M.length){A.innerHTML='<p class="mu">Aucun match aujourd’hui dans les championnats suivis.</p>';throw new Error('no matches')}
+document.getElementById('d').textContent=DATE+' · Europe · '+bilan();
+const best=M.map(m=>{const o=[['1',m.p1],['N',m.pN],['2',m.p2]].sort((a,b)=>b[1]-a[1])[0];return{m,k:o[0],p:o[1]}}).sort((a,b)=>b.p-a.p)[0];
+const tip=el('div','card tip','<div class="lg">Conseil du jour</div><div class="t"></div><div class="mu"></div>');
+tip.children[1].textContent=nm(best.m)+' : '+(best.k=='1'?best.m.home+' gagne':best.k=='2'?best.m.away+' gagne':'match nul');
+tip.children[2].textContent='Confiance '+pc(best.p)+' · '+best.m.h;A.appendChild(tip);
+[['Combiné safe',legSafe,'card',2,1]].forEach(([ti,f,c,n,mx])=>{
+ const r=combo(f,n,mx);if(r.l.length<2)return;const e=el('div',c,'<div style="font-weight:600"></div>');e.children[0].textContent=ti;
+ r.l.forEach(x=>{const row=el('div','l','<span></span><span></span>');row.children[0].textContent=x.m+' : '+x.l;row.children[1].textContent=pc(x.p);e.appendChild(row)});
+ const t=el('div','tot','<span></span><b></b>');t.children[0].textContent='Cote équitable ~'+(1/r.p).toFixed(2).replace('.',',');t.children[1].textContent=pc(r.p);e.appendChild(t);A.appendChild(e)});
+function target(mx,ti,c){const L=OPEN.map(legFun),n=L.length;let b=null;
+ for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){let p=L[i].p*L[j].p;if(p<=mx&&(!b||p>b.p))b={l:[L[i],L[j]],p};
+  for(let k=j+1;k<n;k++){p=L[i].p*L[j].p*L[k].p;if(p<=mx&&(!b||p>b.p))b={l:[L[i],L[j],L[k]],p}}}
+ if(!b){const e=el('div',c,'<div style="font-weight:600"></div><p class="mu"></p>');e.children[0].textContent=ti;e.children[1].textContent='Pas assez de matchs à venir pour ce combiné aujourd’hui.';A.appendChild(e);return}const e=el('div',c,'<div style="font-weight:600"></div>');e.children[0].textContent=ti;
+ b.l.forEach(x=>{const row=el('div','l','<span></span><span></span>');row.children[0].textContent=x.m+' : '+x.l;row.children[1].textContent=pc(x.p);e.appendChild(row)});
+ const o=(1/b.p).toFixed(2).replace('.',','),t=el('div','tot','<span></span><b></b>');t.children[0].textContent='Cote équitable ~'+o;t.children[1].textContent=pc(b.p);e.appendChild(t);
+ const n2=el('p','mu',0);n2.style.margin='6px 0 0';n2.textContent='À jouer seulement si la cote du bookmaker est au moins de '+(1/mx).toFixed(2).replace('.',',')+'.';e.appendChild(n2);A.appendChild(e)}
+target(.5,'Mon conseil cote 2+','card tip');target(.2,'Combiné fun (cote 5+)','card fun');
+A.appendChild(el('h2',0,'Tous les matchs'));
+M.forEach(m=>{const mx=Math.max(m.p1,m.pN,m.p2),c=el('div','card');
+ const B=(k,p,on)=>`<div class="b ${on?'on':''}">${k}<b>${pc(p)}</b></div>`;
+ c.innerHTML=`<div class="lg"></div><div class="t"></div><div class="g">${B('1',m.p1,m.p1==mx)}${B('N',m.pN,m.pN==mx)}${B('2',m.p2,m.p2==mx)}</div><div class="g2">${B('Les 2 marquent : OUI',m.btts,m.btts>=.5)}${B('NON',1-m.btts,m.btts<.5)}</div><p class="mu" style="margin:8px 0 0"></p>`;
+ c.children[0].textContent=m.lg+' · '+m.h;c.children[1].textContent=nm(m);c.children[4].textContent='🤖 '+m.ia;const rr=el('div','mu');rr.style.marginTop='6px';rr.textContent=status(m);c.appendChild(rr);A.appendChild(c)});
+</script></body></html>

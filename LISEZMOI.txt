@@ -1,0 +1,1 @@
+Voir les étapes dans la conversation. Fichiers : index.html, data.js, manifest.json, sw.js, icon-512.png, update.js, .github/workflows/update.yml
