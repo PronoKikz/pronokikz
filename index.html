@@ -55,7 +55,7 @@ h2{font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:.06e
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 const $=id=>document.getElementById(id),A=$('app');
 const h=(t,c,x,...k)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;k.forEach(n=>n&&e.appendChild(n));return e};
-const pc=x=>Math.round(x*100)+'%',cote=x=>(1/x).toFixed(2).replace('.',','),nm=m=>m.home+' – '+m.away;
+const pp=x=>x<.1?(x*100).toFixed(1).replace('.',',')+'%':Math.round(x*100)+'%',pc=x=>Math.round(x*100)+'%',cote=x=>(1/x).toFixed(2).replace('.',','),nm=m=>m.home+' – '+m.away;
 const X=s=>s==='12'?'1/2':s.replace(/N/g,'X'),nz=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 const TD=typeof TODAY!=='undefined'?TODAY:new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date());
 const EX=typeof EXPERTS!=='undefined'?EXPERTS:[];
@@ -83,10 +83,22 @@ let IDX={};try{IDX=JSON.parse(localStorage.getItem('pfidx')||'{}')}catch(e){}
 const save=()=>{try{localStorage.setItem('pfidx',JSON.stringify(IDX))}catch(e){}};
 function box(cls,ti,legs,note,next,info){const p=legs.reduce((a,x)=>a*x.p,1),e=h('div','card '+cls,null,h('div','ttl',ti));
  legs.forEach(x=>e.appendChild(h('div','l',null,h('span',null,x.m+' : '+x.l),h('span',null,pc(x.p)))));
- e.appendChild(h('div','tot',null,h('span',null,'Cote équitable ~'+cote(p)),h('b',null,pc(p))));if(note)e.appendChild(h('p','ia',note));
+ e.appendChild(h('div','tot',null,h('span',null,'Cote équitable ~'+cote(p)),h('b',null,pp(p))));if(note)e.appendChild(h('p','ia',note));
  if(next){const b=h('button','chg','🔄 Autre combiné ('+info+')');b.onclick=next;e.appendChild(b)}A.appendChild(e)}
-function cyc(key,list,mx,safe,cls,ti,note){const c=cands(list,mx,safe);
- if(!c.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',ti),h('p','ia','Pas assez de matchs à venir pour ce combiné.')));return}
+function allLegs(m){const c=[[m.home+' gagne',m.p1],['Match nul',m.pN],[m.away+' gagne',m.p2],['BTTS oui',m.btts],['BTTS non',1-m.btts]];
+ if(m.o25!=null)c.push(['+2,5 buts',m.o25],['-2,5 buts',1-m.o25]);return c.map(([l,p])=>mk(m,l,p))}
+function favLegs(m){const c=m.fin.split('').map(x=>[x,x=='1'?m.p1:x=='N'?m.pN:m.p2]).sort((a,b)=>b[1]-a[1])[0],o=[mk(m,c[0]=='1'?m.home+' gagne':c[0]=='2'?m.away+' gagne':'Match nul',c[1]),
+  mk(m,m.btts>=.5?'BTTS oui':'BTTS non',Math.max(m.btts,1-m.btts))];
+ if(m.o25!=null)o.push(mk(m,m.o25>=.5?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25)));return o}
+function beam(list,mx,maxL,fn){const res=new Map();let st=[{l:[],p:1}];
+ list.forEach(m=>{const opts=(fn||allLegs)(m),nx=[];
+  for(const s of st){nx.push(s);if(s.l.length<maxL)for(const o of opts){const p=s.p*o.p,n={l:[...s.l,o],p};
+   if(p<=mx){if(n.l.length>1)res.set(n.l.map(x=>x.l).join('|'),n)}else nx.push(n)}}
+  st=nx.sort((a,b)=>a.p-b.p).slice(0,300)});
+ return[...res.values()].sort((a,b)=>b.p-a.p).slice(0,400)}
+function palier(c,thr){const out=[];thr.forEach(t=>{const b=c.find(x=>x.p<=t+1e-9&&!out.includes(x));if(b)out.push(b)});return out}
+function cyc(key,c,cls,ti,note,vide){
+ if(!c.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',ti),h('p','ia',vide||'Pas assez de matchs à venir pour ce combiné.')));return}
  const k=day+key,i=(IDX[k]||0)%c.length;
  box(cls,ti,c[i].l,note,c.length>1?()=>{IDX[k]=(i+1)%c.length;save();render()}:null,(i+1)+'/'+c.length)}
 function share(m){const t=nm(m)+' ('+m.lg+' '+m.h+')\nProno : '+X(m.fin)+' · BTTS '+(m.btts>=.5?'OUI':'NON')+(m.o25!=null?' · '+(m.o25>=.5?'+2,5':'-2,5')+' buts':'')+(m.bt?'\nButeur : '+m.bt:'');
@@ -117,11 +129,12 @@ function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.f
 function conseils(open){
  if(open.length<2){A.appendChild(h('p','mu','Pas assez de matchs à venir pour proposer des combinés.'));return}
  if(typeof COMBO!=='undefined'&&COMBO&&COMBO.legs&&COMBO.legs.length&&day==TD)box('reco','Combiné safe',COMBO.legs,COMBO.note||'');
- else cyc('safe',open,1,true,'reco','Combiné safe','Sélections les plus sûres (double chance). Cotes basses : vérifie la cote du bookmaker.');
+ else cyc('safe',cands(open,1,true),'reco','Combiné safe','Sélections les plus sûres (double chance). Cotes basses : vérifie la cote du bookmaker.');
  const best=open.map(m=>({m,o:m.fin.length==1?pick(m):sg(m)})).sort((a,b)=>b.o[1]-a.o[1])[0];
  A.appendChild(h('div','card tip',null,h('div','mu','CONSEIL DU JOUR'),h('div','ttl',nm(best.m)+' : '+(best.o[0]=='1'?best.m.home+' gagne':best.o[0]=='2'?best.m.away+' gagne':'match nul')),h('div','mu','Confiance '+pc(best.o[1])+' · '+best.m.h)));
- cyc('c2',open,.5,false,'c2','Mon conseil cote 2+','À jouer seulement si la cote du bookmaker est au moins de 2,00.');
- cyc('fun',open,.2,false,'fun','Combiné fun (cote 5+)','À jouer seulement si la cote du bookmaker est au moins de 5,00.')}
+ cyc('c2',cands(open,.5,false),'c2','Mon conseil cote 2+','À jouer seulement si la cote du bookmaker est au moins de 2,00.');
+ cyc('fun',beam(open,.2,5,favLegs).slice(0,5),'fun','Combiné fun (cote 5 et plus)','Composé de mes pronos favoris du jour. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
+ cyc('f40',palier(beam(open,.025,8),[.025,.02,.0133,.01,.0067]),'fun','Combiné fun (cote 40 et plus)','Environ 1 chance sur 40 de passer, voire moins : à tout petit prix seulement.','Pas assez de matchs à venir pour atteindre une cote de 40.')}
 function render(){
  A.textContent='';['tabs','vtabs','flt'].forEach(i=>$(i).textContent='');
  [0,1,2].forEach(i=>{const b=h('button',day==dayStr(i)?'on':'',dayLabel(i));b.onclick=()=>{day=dayStr(i);F.lg='';render()};$('tabs').appendChild(b)});
