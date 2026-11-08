@@ -62,6 +62,7 @@ const EX=typeof EXPERTS!=='undefined'?EXPERTS:[];
 const sg=m=>[['1',m.p1],['N',m.pN],['2',m.p2]].sort((a,b)=>b[1]-a[1])[0];
 const dc=m=>[['1N',m.p1+m.pN],['N2',m.pN+m.p2],['12',m.p1+m.p2]];
 const pf=(m,f)=>f.split('').reduce((a,c)=>a+(c=='1'?m.p1:c=='N'?m.pN:m.p2),0);
+if(typeof EXTRA!=='undefined')EXTRA.forEach(x=>{if(!M.some(m=>m.id===x.id))M.push(x)});
 M.forEach(m=>{m.d=m.d||TD;const e=EX.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
  const s=sg(m),d=dc(m).sort((a,b)=>b[1]-a[1])[0];
  m.fin=e&&e.fin?e.fin:(s[1]>=.55?s[0]:d[0]);m.ex=(e&&e.ex)||'';m.bt=(e&&e.bt)||m.bt||''});
@@ -119,7 +120,10 @@ function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.ia||'').match(/(\d)-(\d)/),
  if(m.bt)e.appendChild(h('div','bt',null,h('span',null,'⚽ Buteur conseillé'),h('b',null,m.bt)));
  if(m.ex)e.appendChild(h('p','ia','👥 '+m.ex));
  e.appendChild(c?h('div','fin','Score final '+c.s+'  ·  Résultat '+(c.r?'✅':'❌')+'  ·  BTTS '+(c.b?'✅':'❌')):h('p','ia','🤖 '+(m.ia||'')));return e}
-let day=TD,view='m',F={lg:'',hi:false};
+const NLG='Ligue des nations';
+const DL=(()=>{const a=[...new Set(M.filter(m=>m.lg!==NLG&&m.d>=TD).map(m=>m.d))].sort().slice(0,3);return a.length?a:[TD]})();
+let day=DL[0],view='m',F={lg:'',hi:false};
+const dlab=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:00'))/864e5);return n==0?'Aujourd’hui':n==1?'Demain':new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})};
 const dayLabel=i=>{if(i==0)return'Aujourd’hui';if(i==1)return'Demain';const d=new Date(TD+'T12:00:00');d.setDate(d.getDate()+i);return d.toLocaleDateString('fr-FR',{weekday:'long'})};
 const dayStr=i=>{const d=new Date(TD+'T12:00:00');d.setDate(d.getDate()+i);return d.toISOString().slice(0,10)};
 function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.filter(x=>x[f]!=null);return a.length?Math.round(100*a.filter(x=>x[f]).length/a.length)+'%':'–'};
@@ -135,11 +139,19 @@ function conseils(open){
  cyc('c2',cands(open,.5,false),'c2','Mon conseil cote 2+','À jouer seulement si la cote du bookmaker est au moins de 2,00.');
  cyc('fun',beam(open,.2,5,favLegs).slice(0,5),'fun','Combiné fun (cote 5 et plus)','Composé de mes pronos favoris du jour. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
  cyc('f40',palier(beam(open,.025,8),[.025,.02,.0133,.01,.0067]),'fun','Combiné fun (cote 40 et plus)','Environ 1 chance sur 40 de passer, voire moins : à tout petit prix seulement.','Pas assez de matchs à venir pour atteindre une cote de 40.')}
+function nations(){const L=M.filter(m=>m.lg===NLG&&m.d>=TD).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
+ if(!L.length){A.appendChild(h('p','mu','Pas de match de Ligue des nations à venir pour l’instant.'));return}
+ const open=L.filter(isOpen);
+ if(open.length>1)cyc('nlsafe',cands(open,1,true),'reco','Combiné safe Ligue des nations','Sélections les plus sûres (double chance). Cotes basses.');
+ [...new Set(L.map(m=>m.d))].forEach(d=>{A.appendChild(h('h2',null,new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})));L.filter(m=>m.d===d).forEach(m=>A.appendChild(card(m)))})}
 function render(){
  A.textContent='';['tabs','vtabs','flt'].forEach(i=>$(i).textContent='');
- [0,1,2].forEach(i=>{const b=h('button',day==dayStr(i)?'on':'',dayLabel(i));b.onclick=()=>{day=dayStr(i);F.lg='';render()};$('tabs').appendChild(b)});
- [['m','⚽ Matchs'],['c','🎯 Conseils']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
- const dm=M.filter(m=>m.d===day),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
+ [['m','⚽ Matchs'],['n','🌍 Ligue des nations'],['c','🎯 Conseils']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
+ if(view=='n'){nations();return}
+ DL.forEach(d=>{const b=h('button',day==d?'on':'',dlab(d));b.onclick=()=>{day=d;F.lg='';render()};$('tabs').appendChild(b)});
+ if(DL[0]!=TD&&day==DL[0])A.appendChild(h('p','mu','Pas de match aujourd’hui (trêve ou jour sans match). Voici les prochains matchs.'));
+ 
+ const dm=M.filter(m=>m.d===day&&m.lg!==NLG),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
  if(!dm.length){A.appendChild(h('p','mu','Aucun match pour ce jour pour l’instant. Les matchs des prochains jours s’ajoutent à la prochaine mise à jour.'));return}
  if(view=='c'){conseils(open);return}
  const fb=(t,on,f)=>{const b=h('button',on?'on':'',t);b.onclick=f;$('flt').appendChild(b)};
