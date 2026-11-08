@@ -1,7 +1,12 @@
 // Avis d'experts + mon prono final, remplis à la main (une ligne par match).
 // h / a : début du nom de l'équipe domicile / extérieur (minuscules, sans accents)
 // fin : 1, N, 2 (résultat) ou 1N, N2, 12 (double chance) ; ex : avis des experts ; bt : buteur conseillé
-const EXPERTS=[];
+// aj : ajustement manuel (absences, enjeux, tactique, confrontations) de -1 à +1 ; positif = avantage à l'équipe à domicile
+const EXPERTS=[
+{h:'turquie',a:'belgique',fin:'2',ex:'Experts : victoire de la Belgique.',bt:''},
+{h:'italie',a:'france',fin:'N2',ex:'Experts : la France gagne ou fait nul, moins de 2,5 buts. Italie sans Kean, Retegui ni Raspadori.',bt:'Mbappé (France)'},
+{h:'angleterre',a:'croatie',fin:'1',ex:'Experts : victoire de l’Angleterre, plus de 2,5 buts (moins de 3,5 pour certains). 7-0 à l’aller.',bt:'Kane (Angleterre)'}
+];
 // Combiné conseillé choisi à la main (facultatif). Si vide, l'appli choisit le plus sûr.
 // Exemple : const COMBO={legs:[{m:'PSG – Troyes',l:'PSG gagne',p:0.8}],note:'Mon avis'};
 const COMBO=null;
@@ -15,13 +20,13 @@ const EXTRA=[
 "h": "18:00",
 "home": "Turquie",
 "away": "Belgique",
-"p1": 0.24,
-"pN": 0.26,
-"p2": 0.5,
+"p1": 0.17,
+"pN": 0.22,
+"p2": 0.61,
 "btts": 0.55,
-"o25": 0.5,
+"o25": 0.6,
 "r": null,
-"ia": "Estimation à la main (classement après 4 journées). Score probable : 1-2",
+"ia": "Estimation à la main + avis d'experts. Score probable : 1-2",
 "bt": "",
 "ex": ""
 },
@@ -32,13 +37,13 @@ const EXTRA=[
 "h": "20:45",
 "home": "Italie",
 "away": "France",
-"p1": 0.31,
-"pN": 0.3,
-"p2": 0.39,
-"btts": 0.55,
-"o25": 0.45,
+"p1": 0.26,
+"pN": 0.27,
+"p2": 0.47,
+"btts": 0.5,
+"o25": 0.4,
 "r": null,
-"ia": "Estimation à la main (classement après 4 journées). Score probable : 1-1",
+"ia": "Estimation à la main + avis d'experts. Score probable : 0-1",
 "bt": "",
 "ex": ""
 },
@@ -66,13 +71,13 @@ const EXTRA=[
 "h": "20:45",
 "home": "Angleterre",
 "away": "Croatie",
-"p1": 0.7,
+"p1": 0.72,
 "pN": 0.17,
-"p2": 0.13,
-"btts": 0.42,
-"o25": 0.62,
+"p2": 0.11,
+"btts": 0.45,
+"o25": 0.68,
 "r": null,
-"ia": "Estimation à la main (classement après 4 journées). Score probable : 2-0",
+"ia": "Estimation à la main + avis d'experts. Score probable : 3-0",
 "bt": "",
 "ex": ""
 },
