@@ -2,7 +2,7 @@
 const fs=require('fs');
 const K=process.env.FOOTBALL_DATA_KEY,CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL').split(',');
 if(!K){console.error('FOOTBALL_DATA_KEY manquante');process.exit(1)}
-const get=async p=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
+const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
 const pois=(l,k)=>{let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p};
@@ -21,7 +21,7 @@ const r3=x=>Math.round(x*1000)/1000;
  for(const f of fx){
   const c=f.competition.code;let m=old[f.id];
   if(!m){
-   if(!st[c]){await sleep(6500);const j=await get('/competitions/'+c+'/standings'),t=(j.standings||[]).find(x=>x.type==='TOTAL');st[c]=Object.fromEntries((t?t.table:[]).map(r=>[r.team.id,r]))}
+   if(!st[c]){try{await sleep(6500);const j=await get('/competitions/'+c+'/standings'),t=(j.standings||[]).find(x=>x.type==='TOTAL');st[c]=Object.fromEntries((t?t.table:[]).map(r=>[r.team.id,r]))}catch(e){console.log('classement '+c+' : '+e.message);st[c]={}}}
    const H=st[c][f.homeTeam.id],A=st[c][f.awayTeam.id];if(!H||!A||!H.playedGames||!A.playedGames)continue;
    const lh=Math.max(.3,(H.goalsFor/H.playedGames+A.goalsAgainst/A.playedGames)/2*1.08),la=Math.max(.3,(A.goalsFor/A.playedGames+H.goalsAgainst/H.playedGames)/2*.92),x=model(lh,la);
    m={id:f.id,lg:f.competition.name,home:f.homeTeam.shortName||f.homeTeam.name,away:f.awayTeam.shortName||f.awayTeam.name,
@@ -38,5 +38,5 @@ const r3=x=>Math.round(x*1000)/1000;
  fs.writeFileSync('data.json',JSON.stringify({matches:all}));
  const fr=new Intl.DateTimeFormat('fr-FR',{...tz,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  fs.writeFileSync('data.js',`const DATE=${JSON.stringify(fr)};\nconst TODAY=${JSON.stringify(today)};\nconst UPDATED=${JSON.stringify(new Date().toISOString())};\nconst M=${JSON.stringify(all)};\n`);
- console.log(all.length+' matchs');
+ const nb={};all.forEach(m=>nb[m.d]=(nb[m.d]||0)+1);console.log(all.length+' matchs', JSON.stringify(nb));
 })().catch(e=>{console.error(e.message);process.exit(1)});

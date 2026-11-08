@@ -57,7 +57,7 @@ const $=id=>document.getElementById(id),A=$('app');
 const h=(t,c,x,...k)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;k.forEach(n=>n&&e.appendChild(n));return e};
 const pp=x=>x<.1?(x*100).toFixed(1).replace('.',',')+'%':Math.round(x*100)+'%',pc=x=>Math.round(x*100)+'%',cote=x=>(1/x).toFixed(2).replace('.',','),nm=m=>m.home+' – '+m.away;
 const X=s=>s==='12'?'1/2':s.replace(/N/g,'X'),nz=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
-const TD=typeof TODAY!=='undefined'?TODAY:new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date());
+const TD=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date());
 const EX=typeof EXPERTS!=='undefined'?EXPERTS:[];
 const sg=m=>[['1',m.p1],['N',m.pN],['2',m.p2]].sort((a,b)=>b[1]-a[1])[0];
 const dc=m=>[['1N',m.p1+m.pN],['N2',m.pN+m.p2],['12',m.p1+m.p2]];
@@ -140,7 +140,7 @@ function render(){
  [0,1,2].forEach(i=>{const b=h('button',day==dayStr(i)?'on':'',dayLabel(i));b.onclick=()=>{day=dayStr(i);F.lg='';render()};$('tabs').appendChild(b)});
  [['m','⚽ Matchs'],['c','🎯 Conseils']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
  const dm=M.filter(m=>m.d===day),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
- if(!dm.length){A.appendChild(h('p','mu','Aucun match ce jour-là dans les championnats suivis.'));return}
+ if(!dm.length){A.appendChild(h('p','mu','Aucun match pour ce jour pour l’instant. Les matchs des prochains jours s’ajoutent à la prochaine mise à jour.'));return}
  if(view=='c'){conseils(open);return}
  const fb=(t,on,f)=>{const b=h('button',on?'on':'',t);b.onclick=f;$('flt').appendChild(b)};
  fb('Tous',!F.lg,()=>{F.lg='';render()});lgs.forEach(l=>fb(l,F.lg===l,()=>{F.lg=l;render()}));fb('⭐ Confiance élevée',F.hi,()=>{F.hi=!F.hi;render()});
