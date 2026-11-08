@@ -2,6 +2,7 @@
 // Critères automatiques : forme (5 derniers), niveau, domicile/extérieur, attaque/défense.
 // Absences, enjeux, tactique, confrontations directes : ajustés à la main dans expert.js (champ aj).
 const fs=require('fs');
+const { predictMatch } = require('./predictor');
 const K=process.env.FOOTBALL_DATA_KEY,CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL').split(',');
 if(!K){console.error('FOOTBALL_DATA_KEY manquante');process.exit(1)}
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
@@ -13,21 +14,18 @@ function model(lh,la){let h=0,n=0,a=0,b=[0,0,0];
  const t=h+n+a,o25=1-[0,1,2].reduce((s,k)=>s+pois(lh+la,k),0);
  return{p1:h/t,pN:n/t,p2:a/t,btts:(1-Math.exp(-lh))*(1-Math.exp(-la)),o25,sc:b[0]+'-'+b[1]}}
 const r3=x=>Math.round(x*1000)/1000,r=(x,y)=>y?x/y:0;
-function stats(ms){const T={},t=id=>T[id]||(T[id]={g:0,gf:0,ga:0,pts:0,hg:0,hgf:0,hga:0,hpts:0,ag:0,agf:0,aga:0,apts:0,last:[]});
+function stats(ms){const T={},t=id=>T[id]||(T[id]={g:0,gf:0,ga:0,pts:0,hg:0,hgf:0,hga:0,hpts:0,ag:0,agf:0,aga:0,apts:0,elo:1500,last:[]});
  ms.filter(m=>m.status==='FINISHED'&&m.score&&m.score.fullTime&&m.score.fullTime.home!=null).sort((a,b)=>a.utcDate.localeCompare(b.utcDate)).forEach(m=>{
   const hg=m.score.fullTime.home,ag=m.score.fullTime.away,H=t(m.homeTeam.id),A=t(m.awayTeam.id),ph=hg>ag?3:hg==ag?1:0,pa=ag>hg?3:ag==hg?1:0;
-  H.g++;H.gf+=hg;H.ga+=ag;H.pts+=ph;H.hg++;H.hgf+=hg;H.hga+=ag;H.hpts+=ph;H.last.push(ph);
-  A.g++;A.gf+=ag;A.ga+=hg;A.pts+=pa;A.ag++;A.agf+=ag;A.aga+=hg;A.apts+=pa;A.last.push(pa)});
+  const eh=1/(1+Math.pow(10,(A.elo-(H.elo+60))/400)),delta=20*((ph/3)-eh);H.elo+=delta;A.elo-=delta;
+  H.g++;H.gf+=hg;H.ga+=ag;H.pts+=ph;H.hg++;H.hgf+=hg;H.hga+=ag;H.hpts+=ph;H.last.push({pts:ph,gf:hg,ga:ag});
+  A.g++;A.gf+=ag;A.ga+=hg;A.pts+=pa;A.ag++;A.agf+=ag;A.aga+=hg;A.apts+=pa;A.last.push({pts:pa,gf:ag,ga:hg})});
  return T}
 function predict(H,A){
- const bl=(a,na,b,nb)=>na>=2?.6*r(a,na)+.4*r(b,nb):r(b,nb);
- const attH=bl(H.hgf,H.hg,H.gf,H.g),defH=bl(H.hga,H.hg,H.ga,H.g),attA=bl(A.agf,A.ag,A.gf,A.g),defA=bl(A.aga,A.ag,A.ga,A.g);
- let lh=(attH+defA)/2,la=(attA+defH)/2;
- const fp=x=>x.last.slice(-5),fpts=x=>fp(x).reduce((a,b)=>a+b,0),fpg=x=>fp(x).length?fpts(x)/fp(x).length:1.35;
- const R=(x,v,vb)=>(.20*(r(x.pts,x.g)-1.35)+.20*(fpg(x)-1.35)+.15*(v-vb)+.15*r(x.gf-x.ga,x.g)*.8)/.70;
- const d=R(H,H.hg>=2?r(H.hpts,H.hg):r(H.pts,H.g),1.5)-R(A,A.ag>=2?r(A.apts,A.ag):r(A.pts,A.g),1.1);
- lh=Math.max(.3,lh*Math.exp(.12*d));la=Math.max(.3,la*Math.exp(-.12*d));
- return{...model(lh,la),fm:[fpts(H),fpts(A)]}}
+ const x=predictMatch(H,A);
+ const recent=xTeam=>xTeam.last.slice(-5).reduce((sum,m)=>sum+(m.pts||0),0);
+ return{...x,fm:[recent(H),recent(A)]};
+}
 (async()=>{
  const today=day(new Date()),from=day(off(-1)),last=day(off(7));
  const prev=fs.existsSync('data.json')?(JSON.parse(fs.readFileSync('data.json')).matches||[]):[];
