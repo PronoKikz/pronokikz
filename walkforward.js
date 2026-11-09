@@ -41,7 +41,9 @@ function venueRates(team, venue, league) {
 function predictBeforeMatch(match, allMatches) {
   const kickoff=Date.parse(match.utcDate);
   if (!Number.isFinite(kickoff)) return null;
-  const comp=match.competition&&(match.competition.code||match.competition.id||match.competition.name);\n  // Sans identifiant de compétition fiable, ne jamais mélanger les statistiques de plusieurs ligues.\n  if (comp == null) return null;
+  const comp=match.competition&&(match.competition.code||match.competition.id||match.competition.name);
+  // Sans identifiant de compétition fiable, ne jamais mélanger les statistiques de plusieurs ligues.
+  if (comp == null) return null;
   const prior=allMatches.filter(m=>{
     if (!isFinished(m)||Date.parse(m.utcDate)>=kickoff) return false;
     const key=m.competition&&(m.competition.code||m.competition.id||m.competition.name);
