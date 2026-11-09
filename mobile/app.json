@@ -22,6 +22,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/e73e2f6d-a530-4a82-a557-2ad7674a38fd"
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
