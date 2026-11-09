@@ -13,16 +13,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
 const nz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 const same=(a,b)=>{a=nz(a);b=nz(b);return !!a&&!!b&&(a.includes(b)||b.includes(a))};
-const pois=(l,k)=>{let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p};
+const { model } = require('./predictor');
 const r3=x=>Math.round(x*1000)/1000,r=(x,y)=>y?x/y:0,sum=a=>a.reduce((s,v)=>s+v,0);
 // Poisson + correction Dixon-Coles ; sortie : 1N2, BTTS, +1,5, +2,5, scores les plus probables
-function model(lh,la){const rho=-.08,cells=[];let S=0;
- for(let i=0;i<=10;i++)for(let j=0;j<=10;j++){let p=pois(lh,i)*pois(la,j);
-  if(i<2&&j<2)p*=i==0&&j==0?1-lh*la*rho:i==0&&j==1?1+lh*rho:i==1&&j==0?1+la*rho:1-rho;cells.push([i,j,p]);S+=p}
- let h=0,n=0,a=0,bt=0,o=0,o15=0;
- cells.forEach(c=>{c[2]/=S;const[i,j,p]=c;i>j?h+=p:i==j?n+=p:a+=p;if(i>0&&j>0)bt+=p;if(i+j>2)o+=p;if(i+j>1)o15+=p});
- const scs=cells.slice().sort((x,y)=>y[2]-x[2]).slice(0,3).map(c=>[c[0]+'-'+c[1],r3(c[2])]);
- return{p1:h,pN:n,p2:a,btts:bt,o25:o,o15,scs}}
 const HL=70,fin=m=>m.status==='FINISHED'&&m.score&&m.score.fullTime&&m.score.fullTime.home!=null;
 function stats(ms){const now=Date.now(),T={},t=id=>T[id]||(T[id]={w:0,gf:0,ga:0,pts:0,hw:0,hgf:0,hga:0,hpts:0,aw:0,agf:0,aga:0,apts:0,last:[],lastDate:0,g:0});let SH=0,SA=0,SW=0;
  ms.filter(fin).sort((a,b)=>a.utcDate.localeCompare(b.utcDate)).forEach(m=>{
