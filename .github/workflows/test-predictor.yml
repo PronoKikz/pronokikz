@@ -17,3 +17,6 @@ jobs:
       - run: node --check update.js
       - run: node --check predictor.js
       - run: node tests/predictor.test.js
+      - run: node --check backtest.js
+      - run: node tests/backtest.test.js
+      - run: node backtest.js
