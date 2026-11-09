@@ -1,10 +1,11 @@
-// Met à jour data.js (matchs sur plusieurs jours, pronos, résultats, historique) via football-data.org
+// Met à jour les pronostics et l'historique Pronokikz via football-data.org
+require('dotenv').config();
 // Critères automatiques : forme (5 derniers), niveau, domicile/extérieur, attaque/défense.
 // Absences, enjeux, tactique, confrontations directes : ajustés à la main dans expert.js (champ aj).
 const fs=require('fs');
 const { predictMatch } = require('./predictor');
-const K=process.env.FOOTBALL_DATA_KEY,CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL').split(',');
-if(!K){console.error('FOOTBALL_DATA_KEY manquante');process.exit(1)}
+const K=process.env.FOOTBALL_DATA_API_KEY||process.env.FOOTBALL_DATA_KEY,CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL').split(',');
+if(!K){console.error('Clé API manquante : ajoute FOOTBALL_DATA_API_KEY dans .env ou configure le secret GitHub FOOTBALL_DATA_API_KEY.');process.exit(1)}
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
