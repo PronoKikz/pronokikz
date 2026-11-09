@@ -36,6 +36,10 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      - name: Generate Android app icon
+        working-directory: mobile
+        run: npx --yes sharp-cli -i assets/icon.svg -o assets/icon.png resize 1024 1024
+
       - name: Build Android APK with EAS
         working-directory: mobile
         run: eas build --platform android --profile preview --non-interactive --wait --json > ../eas-build.json
