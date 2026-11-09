@@ -1,0 +1,24 @@
+name: Tests du moteur prédictif
+on:
+  push:
+    branches:
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+jobs:
+  predictor-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --check update.js
+      - run: node --check predictor.js
+      - run: node tests/predictor.test.js
+      - run: node --check backtest.js
+      - run: node tests/backtest.test.js
+      - run: node backtest.js
+      - run: node --check walkforward.js
+      - run: node tests/walkforward.test.js

@@ -1,0 +1,34 @@
+name: Backtest chronologique Pronokikz
+on:
+  schedule:
+    - cron: '0 5 * * 1' # Chaque lundi à 05:00 UTC, avant le rapport de surveillance.
+  workflow_dispatch:
+  # Lancement manuel depuis l'onglet Actions de GitHub.
+jobs:
+  walkforward:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Vérifier le script
+        run: node --check walkforward.js
+      - name: Lancer le backtest chronologique
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY || secrets.FOOTBALL_DATA_KEY }}
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY || secrets.FOOTBALL_DATA_API_KEY }}
+          WALKFORWARD_JSON: '1'
+        run: node walkforward.js
+      - name: Publier le résumé du backtest
+        if: success()
+        run: |
+          node -e "const fs=require('node:fs');const r=JSON.parse(fs.readFileSync('walkforward-report.json','utf8'));const pct=v=>v==null?'N/A':(v*100).toFixed(1)+'%';const lines=['## Backtest chronologique Pronokikz','',`- Matchs testés : **${r.matchesTested}**`,`- Matchs ignorés (historique insuffisant) : **${r.skipped.insufficientHistory}**`,`- Précision 1N2 : **${pct(r.accuracy1x2)}**`,`- Brier score : **${r.brierScore==null?'N/A':r.brierScore.toFixed(4)}**`,`- Log loss : **${r.logLoss==null?'N/A':r.logLoss.toFixed(4)}**`,`- BTTS : **${pct(r.bttsAccuracy)}**`,`- Plus de 2,5 buts : **${pct(r.over25Accuracy)}**`,''];if(r.matchesTested<100)lines.push('⚠️ Échantillon inférieur à 100 matchs : résultats indicatifs uniquement.');fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\\n')+'\\n');"
+      - name: Conserver le rapport détaillé
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pronokikz-walkforward-report
+          path: walkforward-report.json
+          if-no-files-found: error
+          retention-days: 30
