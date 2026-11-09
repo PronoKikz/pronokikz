@@ -20,3 +20,5 @@ jobs:
       - run: node --check backtest.js
       - run: node tests/backtest.test.js
       - run: node backtest.js
+      - run: node --check walkforward.js
+      - run: node tests/walkforward.test.js
