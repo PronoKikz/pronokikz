@@ -1,0 +1,22 @@
+# Secrets et variables d'environnement
+.env
+.env.*
+!.env.example
+
+# Dependances Node.js
+node_modules/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+
+# Builds et sorties
+build/
+dist/
+coverage/
+
+# Fichiers système et éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
