@@ -124,9 +124,9 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  // Ligue des nations UEFA : calendrier et scores via le scoreboard public ESPN.
  // Les rencontres sont normalisées dans le même format que les autres compétitions.
  try {
-  const ranges=[['20260901','20260930'],['20261001','20261031'],['20261101','20261130']];
+  const ranges=[['20260924','20260930'],['20261001','20261007'],['20261008','20261014'],['20261015','20261021'],['20261022','20261028'],['20261029','20261031'],['20261101','20261107'],['20261108','20261114'],['20261115','20261117']];
   const packs=await Promise.all(ranges.map(async ([a,b])=>{
-   const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates='+a+'-'+b+'&limit=500';
+   const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates='+a+'-'+b+'';
    const response=await fetch(url,{headers:{'Accept':'application/json'}});
    if(!response.ok)throw new Error('ESPN '+response.status+' sur '+a);
    const json=await response.json();
