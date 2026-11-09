@@ -73,11 +73,10 @@ const pick=m=>[m.fin,pf(m,m.fin)];
 function chk(m){if(!m.r)return null;const [a,b]=m.r,real=a>b?'1':a==b?'N':'2';
  return{s:a+' : '+b,r:m.fin.includes(real),b:(m.btts>=.5)==(a>0&&b>0),o:m.o25==null?null:(m.o25>=.5)==(a+b>2)}}
 function isOpen(m){if(m.r)return false;if(m.d>TD)return true;if(m.d<TD)return false;const [H,I]=m.h.split(':'),n=new Date();return n.getHours()*60+n.getMinutes()<+H*60+ +I}
-const mk=(m,l,p)=>({m:nm(m),k:nm(m),l,p});
+const mk=(m,l,p,kd,sd)=>({m:nm(m),k:nm(m),id:m.id,l,p,kd,sd});
 function legsSafe(m){const f=dc(m).sort((a,b)=>b[1]-a[1]);if(m.fin.length==2)f.sort((a,b)=>(b[0]==m.fin)-(a[0]==m.fin)||b[1]-a[1]);
- return f.slice(0,2).map(([c,p])=>mk(m,(c=='1N'?m.home+' ou nul':c=='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',p))}
-function legsFun(m){const c=[[m.home+' gagne',m.p1],['Match nul',m.pN],[m.away+' gagne',m.p2],['BTTS oui',m.btts],['BTTS non',1-m.btts]];
- if(m.o25!=null)c.push(['+2,5 buts',m.o25],['-2,5 buts',1-m.o25]);return c.sort((a,b)=>b[1]-a[1]).slice(0,2).map(([l,p])=>mk(m,l,p))}
+ return f.slice(0,2).map(([c,p])=>mk(m,(c=='1N'?m.home+' ou nul':c=='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',p,'x2',c))}
+function legsFun(m){return allLegs(m).sort((a,b)=>b.p-a.p).slice(0,2)}
 function cands(list,mx,safe){const L=list.flatMap(safe?legsSafe:legsFun),nb=new Set(L.map(x=>x.k)).size,out=[],ok=(...a)=>new Set(a.map(x=>x.k)).size==a.length,want=safe?[Math.min(3,nb)]:[2,3];
  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){
   if(want.includes(2)&&ok(L[i],L[j])){const p=L[i].p*L[j].p;if(p<=mx)out.push({l:[L[i],L[j]],p})}
@@ -85,15 +84,17 @@ function cands(list,mx,safe){const L=list.flatMap(safe?legsSafe:legsFun),nb=new 
  return out.sort((a,b)=>b.p-a.p).slice(0,5)}
 let IDX={};try{IDX=JSON.parse(localStorage.getItem('pfidx')||'{}')}catch(e){}
 const save=()=>{try{localStorage.setItem('pfidx',JSON.stringify(IDX))}catch(e){}};
+function legsToBets(legs){legs.forEach(x=>{const m=M.find(y=>y.id===x.id);if(m)addBet(m,x.kd,x.sd,x.l,x.p,true,true)});saveB();view='p';render()}
 function box(cls,ti,legs,note,next,info){const p=legs.reduce((a,x)=>a*x.p,1),e=h('div','card '+cls,null,h('div','ttl',ti));
  legs.forEach(x=>e.appendChild(h('div','l',null,h('span',null,x.m+' : '+x.l),h('span',null,pc(x.p)))));
  e.appendChild(h('div','tot',null,h('span',null,'Cote équitable ~'+cote(p)),h('b',null,pp(p))));if(note)e.appendChild(h('p','ia',note));
+ if(legs.every(x=>x.kd&&x.id!=null)){const ab=h('button','chg','➕ Mettre ce combiné dans mes pronos');ab.onclick=()=>legsToBets(legs);e.appendChild(ab)}
  if(next){const b=h('button','chg','🔄 Autre combiné ('+info+')');b.onclick=next;e.appendChild(b)}A.appendChild(e)}
-function allLegs(m){const c=[[m.home+' gagne',m.p1],['Match nul',m.pN],[m.away+' gagne',m.p2],['BTTS oui',m.btts],['BTTS non',1-m.btts]];
- if(m.o15!=null)c.push(['+1,5 buts',m.o15]);if(m.o25!=null)c.push(['+2,5 buts',m.o25],['-2,5 buts',1-m.o25]);return c.map(([l,p])=>mk(m,l,p))}
-function favLegs(m){const c=m.fin.split('').map(x=>[x,x=='1'?m.p1:x=='N'?m.pN:m.p2]).sort((a,b)=>b[1]-a[1])[0],o=[mk(m,c[0]=='1'?m.home+' gagne':c[0]=='2'?m.away+' gagne':'Match nul',c[1]),
-  mk(m,m.btts>=.5?'BTTS oui':'BTTS non',Math.max(m.btts,1-m.btts))];
- if(m.o25!=null)o.push(mk(m,m.o25>=.5?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25)));return o}
+function allLegs(m){const c=[[m.home+' gagne',m.p1,'x2','1'],['Match nul',m.pN,'x2','N'],[m.away+' gagne',m.p2,'x2','2'],['BTTS oui',m.btts,'btts','oui'],['BTTS non',1-m.btts,'btts','non']];
+ if(m.o15!=null)c.push(['+1,5 buts',m.o15,'o15','plus']);if(m.o25!=null)c.push(['+2,5 buts',m.o25,'o25','plus'],['-2,5 buts',1-m.o25,'o25','moins']);return c.map(([l,p,kd,sd])=>mk(m,l,p,kd,sd))}
+function favLegs(m){const c=m.fin.split('').map(x=>[x,x=='1'?m.p1:x=='N'?m.pN:m.p2]).sort((a,b)=>b[1]-a[1])[0],o=[mk(m,c[0]=='1'?m.home+' gagne':c[0]=='2'?m.away+' gagne':'Match nul',c[1],'x2',c[0]),
+  mk(m,m.btts>=.5?'BTTS oui':'BTTS non',Math.max(m.btts,1-m.btts),'btts',m.btts>=.5?'oui':'non')];
+ if(m.o25!=null)o.push(mk(m,m.o25>=.5?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25),'o25',m.o25>=.5?'plus':'moins'));return o}
 function beam(list,mx,maxL,fn){const res=new Map();let st=[{l:[],p:1}];
  list.forEach(m=>{const opts=(fn||allLegs)(m),nx=[];
   for(const s of st){nx.push(s);if(s.l.length<maxL)for(const o of opts){const p=s.p*o.p,n={l:[...s.l,o],p};
@@ -177,34 +178,73 @@ function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(items.length){items.sort((a,b)=>a[1]-b[1]);A.appendChild(h('div','card',null,h('div','ttl','⚠️ Là où le modèle se trompe le plus'),...items.slice(0,3).map(([l,p,n])=>h('div','l',null,h('span',null,l),h('span',null,Math.round(100*p)+'% sur '+n)))))}
  const G=typeof LEARN!=='undefined'&&LEARN._g;if(G&&G.n>=15)A.appendChild(h('div','card',null,h('div','ttl','🔧 Correction automatique du modèle'),h('p','ia','Calculée sur '+G.n+' matchs : contraste favori/outsider ×'+G.T.toFixed(2).replace('.',',')+' · nuls ×'+G.dr.toFixed(2).replace('.',',')+'. Plus il y a de matchs enregistrés, plus la correction est fiable (au départ elle est très prudente).')));
  A.appendChild(h('p','mu','Les écarts constatés corrigent peu à peu les prochains calculs (buts attendus, avantage du domicile), dès 20 matchs par championnat.'))}
-let BETS=[],BANK=100;try{BETS=JSON.parse(localStorage.getItem('pfbets')||'[]');BANK=+localStorage.getItem('pfbank')||100}catch(e){}
-const saveB=()=>{try{localStorage.setItem('pfbets',JSON.stringify(BETS));localStorage.setItem('pfbank',String(BANK))}catch(e){}};
+let BETS=[],COMBOS=[],BANK=100,CBM=0;try{BETS=JSON.parse(localStorage.getItem('pfbets')||'[]');COMBOS=JSON.parse(localStorage.getItem('pfcombos')||'[]');BANK=+localStorage.getItem('pfbank')||100}catch(e){}
+const saveB=()=>{try{localStorage.setItem('pfbets',JSON.stringify(BETS));localStorage.setItem('pfcombos',JSON.stringify(COMBOS));localStorage.setItem('pfbank',String(BANK))}catch(e){}};
 const hasBet=(m,k,sd)=>BETS.some(b=>b.id===m.id&&b.kind===k&&b.side===sd);
-function addBet(m,kind,side,label,p){if(hasBet(m,kind,side))return;BETS.push({id:m.id,d:m.d,h:m.h,lg:m.lg,home:m.home,away:m.away,kind,side,label,p,cote:+(1/p).toFixed(2),mise:0,st:''});saveB();render()}
-function betState(b){const m=M.find(x=>x.id===b.id);if(m&&m.r){const[a,c]=m.r,real=a>c?'1':a==c?'N':'2';b.st=(b.kind=='x2'?b.side.includes(real):b.kind=='btts'?(b.side=='oui')==(a>0&&c>0):(b.side=='plus')==(a+c>2))?'g':'p'}return b.st}
+function addBet(m,kind,side,label,p,cb,quiet){const ex=BETS.find(b=>b.id===m.id&&b.kind===kind&&b.side===side);
+ if(ex){if(cb)ex.cb=true}else BETS.push({id:m.id,d:m.d,h:m.h,lg:m.lg,home:m.home,away:m.away,kind,side,label,p,cote:+(1/p).toFixed(2),mise:0,st:'',cb:!!cb});
+ if(!quiet){saveB();render()}}
+function legSt(b){const m=M.find(x=>x.id===b.id);if(m&&m.r){const[a,c]=m.r,real=a>c?'1':a==c?'N':'2';b.st=(b.kind=='x2'?b.side.includes(real):b.kind=='btts'?(b.side=='oui')==(a>0&&c>0):b.kind=='o15'?(b.side=='plus')==(a+c>1):(b.side=='plus')==(a+c>2))?'g':'p'}return b.st||''}
+const comboSt=L=>{L.forEach(legSt);return L.some(b=>b.st=='p')?'p':L.length&&L.every(b=>b.st=='g')?'g':''};
 const eur=x=>(Math.round(x*100)/100).toFixed(2).replace('.',',')+' €';
-function mesPronos(){BETS.forEach(betState);saveB();
- const cand=M.filter(m=>m.d===day&&!m.r&&m.p1!=null);
- A.appendChild(h('div','card',null,h('div','ttl','➕ Choisir un pari'),h('p','ia','Choisis le jour ci-dessus, puis un match et le type de pari. Il s’ajoute à ta liste plus bas.')));
- if(!cand.length)A.appendChild(h('p','mu','Aucun match à venir ce jour-là. Change de jour avec les onglets ci-dessus.'));
- cand.forEach(m=>A.appendChild(pickRow(m)));
- const bank=h('input','inp');bank.type='number';bank.value=BANK;bank.onchange=()=>{BANK=Math.max(1,+bank.value||100);saveB();render()};
- A.appendChild(h('div','card',null,h('div','ttl','💰 Ma cagnotte'),h('div','lab','Montant total que je peux jouer (€)'),bank,h('p','ia','Sert au conseil de mise. Les données restent sur ton téléphone.')));
- const done=BETS.filter(b=>b.st),mis=done.reduce((a,b)=>a+(+b.mise||0),0),gain=done.reduce((a,b)=>a+(b.st=='g'?(+b.mise||0)*((+b.cote||1)-1):-(+b.mise||0)),0),win=done.filter(b=>b.st=='g').length;
- A.appendChild(h('div','card',null,h('div','ttl','📒 Mon suivi ('+done.length+' paris terminés)'),h('div','stats',null,...[['Misé',eur(mis)],['Bénéfice',(gain>=0?'+':'')+eur(gain)],['Rendement',mis?(Math.round(1000*gain/mis)/10).toString().replace('.',',')+' %':'–']].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),
-  h('p','ia','Réussite : '+(done.length?Math.round(100*win/done.length)+' %':'–')+'. Entre ta mise et la cote du bookmaker : le bénéfice se calcule tout seul quand le match est fini.')));
- if(!BETS.length){A.appendChild(h('p','mu','Aucun prono gardé. Dans « ⚽ Matchs », touche un bouton « ➕ » sous un match pour l’ajouter ici.'));return}
+const nf=(x,d)=>x.toFixed(d==null?2:d).replace('.',',');
+const stakeAdvice=(p,cote)=>{const edge=p*cote-1,f=edge/(cote-1),st=Math.round(BANK*Math.min(f*.25,.03)*2)/2;return edge>.02&&st>0?'Mise conseillée : '+eur(st)+' (Kelly prudent : 1/4, maximum 3 % de la cagnotte)':'Pas d’avantage à cette cote : mieux vaut ne pas jouer (il faudrait au moins '+nf(1/p*1.02)+').'};
+const chipSt=st=>h('span','chip '+(st=='g'?'g':st=='p'?'r':''),st=='g'?'✓ GAGNÉ':st=='p'?'✗ PERDU':'En attente');
+const numInput=(v,step,fn)=>{const i=h('input','inp');i.type='number';i.step=step;i.value=v;i.onchange=()=>fn(+i.value);return i};
+function mesPronos(){
+ BETS.forEach(legSt);COMBOS.forEach(c=>{c.st=comboSt(c.legs)||c.st||''});saveB();
+ const cb=BETS.filter(b=>b.cb);
+ A.appendChild(h('div','card',null,h('div','ttl','Comment ça marche ?'),
+  h('p','ia','1. Plus bas, choisis un match et un pari, puis touche ➕.'),
+  h('p','ia','2. Dans « Ma sélection », touche 🔗 sur les paris à réunir en combiné.'),
+  h('p','ia','3. Entre la cote du bookmaker : la cote totale, la probabilité et la mise conseillée se calculent. Touche « ✅ Valider » pour suivre ton combiné.')));
+ // --- mon combiné
+ const cc=h('div','card reco',null,h('div','ttl','🔗 Mon combiné ('+cb.length+' pari'+(cb.length>1?'s':'')+')'));
+ if(cb.length<2)cc.appendChild(h('p','ia','Touche 🔗 « Dans le combiné » sur au moins 2 paris de ta sélection pour créer un combiné.'));
+ else{const cote=cb.reduce((a,b)=>a*(+b.cote||1),1),p=cb.reduce((a,b)=>a*b.p,1);
+  cb.forEach(b=>cc.appendChild(h('div','l',null,h('span',null,b.home+' – '+b.away+' : '+b.label),h('span',null,'× '+nf(+b.cote||1)))));
+  cc.appendChild(h('div','tot',null,h('span',null,'Cote totale (cotes saisies)'),h('b',null,'× '+nf(cote))));
+  cc.appendChild(h('div','tot',null,h('span',null,'Probabilité estimée · cote équitable ~'+nf(1/p)),h('b',null,pp(p))));
+  cc.appendChild(h('div','lab','Ma mise sur le combiné (€)'));cc.appendChild(numInput(CBM||'','0.5',v=>{CBM=Math.max(0,v||0);render()}));
+  if(CBM>0)cc.appendChild(h('p','ia','Gain possible : +'+eur(CBM*(cote-1))+' (total encaissé '+eur(CBM*cote)+')'));
+  cc.appendChild(h('p','ia',stakeAdvice(p,cote)));
+  if(new Set(cb.map(b=>b.id)).size<cb.length)cc.appendChild(h('p','ia','⚠️ Deux paris sur le même match : ils ne sont pas indépendants, la probabilité affichée est donc approximative.'));
+  const ok=h('button','chg','✅ Valider ce combiné (pour le suivre)');ok.onclick=()=>{if(CBM<=0){return}COMBOS.push({t:Date.now(),legs:cb.map(b=>({...b,cb:false})),cote:+cote.toFixed(2),p,mise:CBM,st:''});cb.forEach(b=>b.cb=false);CBM=0;saveB();render()};
+  cc.appendChild(ok);if(CBM<=0)cc.appendChild(h('p','ia','Entre ta mise pour pouvoir valider.'))}
+ if(cb.length){const vd=h('button','chg','Vider le combiné');vd.onclick=()=>{cb.forEach(b=>b.cb=false);saveB();render()};cc.appendChild(vd)}
+ A.appendChild(cc);
+ // --- ma sélection
+ A.appendChild(h('h2',null,'Ma sélection'));
+ if(!BETS.length)A.appendChild(h('p','mu','Rien pour l’instant : ajoute un pari plus bas.'));
  BETS.slice().sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h)).forEach(b=>{
-  const cote=h('input','inp');cote.type='number';cote.step='0.01';cote.value=b.cote;cote.onchange=()=>{b.cote=Math.max(1.01,+cote.value||b.cote);saveB();render()};
-  const mise=h('input','inp');mise.type='number';mise.step='0.5';mise.value=b.mise||'';mise.onchange=()=>{b.mise=Math.max(0,+mise.value||0);saveB();render()};
-  const edge=b.p*b.cote-1,f=edge/(b.cote-1),st=Math.round(BANK*Math.min(f*.25,.03)*2)/2;
-  const conseil=b.st?'':edge>.02?'Mise conseillée : '+eur(st)+' (Kelly prudent : 1/4, maximum 3 % de la cagnotte)':'Pas d’avantage à cette cote : ne pas jouer (il faudrait au moins '+cote2(b.p)+').';
+  const tg=h('button','addb'+(b.cb?' done':''),b.cb?'✓ Dans le combiné':'🔗 Dans le combiné');tg.onclick=()=>{b.cb=!b.cb;saveB();render()};
   const del=h('button','del','✕');del.onclick=()=>{BETS=BETS.filter(x=>x!==b);saveB();render()};
   A.appendChild(h('div','card',null,
-   h('div','top',null,h('span','mu',b.lg+' · '+b.d.slice(8)+'/'+b.d.slice(5,7)+' '+b.h),h('span','chips',null,b.st?h('span','chip '+(b.st=='g'?'g':'r'),b.st=='g'?'✓ GAGNÉ':'✗ PERDU'):h('span','chip','En attente'),del)),
+   h('div','top',null,h('span','mu',b.lg+' · '+b.d.slice(8)+'/'+b.d.slice(5,7)+' '+b.h),h('span','chips',null,chipSt(b.st),del)),
    h('div','ttl',b.home+' – '+b.away),h('div','mu',b.label+' · probabilité estimée '+pc(b.p)),
-   h('div','gg',null,h('div',null,null,h('div','lab','Cote du bookmaker'),cote),h('div',null,null,h('div','lab','Ma mise (€)'),mise)),
-   h('p','ia',conseil+(b.st&&b.mise?' · Résultat : '+(b.st=='g'?'+'+eur(b.mise*(b.cote-1)):'-'+eur(b.mise)):''))))});
+   h('div','gg',null,h('div',null,null,h('div','lab','Cote du bookmaker'),numInput(b.cote,'0.01',v=>{b.cote=Math.max(1.01,v||b.cote);saveB();render()})),h('div',null,null,h('div','lab','Mise si pari simple (€)'),numInput(b.mise||'','0.5',v=>{b.mise=Math.max(0,v||0);saveB();render()}))),
+   h('div','row3',null,tg),
+   h('p','ia',b.mise>0?(b.st?'Résultat : '+(b.st=='g'?'+'+eur(b.mise*(b.cote-1)):'-'+eur(b.mise)):stakeAdvice(b.p,b.cote)):'Laisse la mise à 0 si tu ne le joues qu’en combiné.')))});
+ // --- ajouter un pari
+ const cand=M.filter(m=>m.d===day&&!m.r&&m.p1!=null);
+ A.appendChild(h('h2',null,'➕ Ajouter un pari (jour choisi en haut)'));
+ if(!cand.length)A.appendChild(h('p','mu','Aucun match à venir ce jour-là. Change de jour avec les onglets en haut.'));
+ cand.forEach(m=>A.appendChild(pickRow(m)));
+ // --- combinés validés
+ if(COMBOS.length){A.appendChild(h('h2',null,'Mes combinés validés'));
+  COMBOS.slice().reverse().forEach(c=>{const g=c.st=='g'?c.mise*(c.cote-1):c.st=='p'?-c.mise:0;
+   const e=h('div','card',null,h('div','top',null,h('span','mu',new Date(c.t).toLocaleDateString('fr-FR')),h('span','chips',null,chipSt(c.st))));
+   c.legs.forEach(b=>e.appendChild(h('div','l',null,h('span',null,b.home+' – '+b.away+' : '+b.label),h('span',null,b.st=='g'?'✓':b.st=='p'?'✗':'…'))));
+   e.appendChild(h('div','tot',null,h('span',null,'Cote × '+nf(c.cote)+' · mise '+eur(c.mise)),h('b',null,c.st?(g>=0?'+':'')+eur(g):'')));A.appendChild(e)})}
+ // --- cagnotte et suivi
+ A.appendChild(h('h2',null,'Ma cagnotte et mon suivi'));
+ A.appendChild(h('div','card',null,h('div','ttl','💰 Ma cagnotte'),h('div','lab','Montant total que je peux jouer (€)'),numInput(BANK,'1',v=>{BANK=Math.max(1,v||100);saveB();render()}),h('p','ia','Sert au conseil de mise. Les données restent sur ton téléphone.')));
+ const sim=BETS.filter(b=>b.st&&b.mise>0),cmb=COMBOS.filter(c=>c.st),
+  mis=sim.reduce((a,b)=>a+b.mise,0)+cmb.reduce((a,c)=>a+c.mise,0),
+  gain=sim.reduce((a,b)=>a+(b.st=='g'?b.mise*(b.cote-1):-b.mise),0)+cmb.reduce((a,c)=>a+(c.st=='g'?c.mise*(c.cote-1):-c.mise),0),
+  nbt=sim.length+cmb.length,win=sim.filter(b=>b.st=='g').length+cmb.filter(c=>c.st=='g').length;
+ A.appendChild(h('div','card',null,h('div','ttl','📒 Mon suivi ('+nbt+' paris terminés avec une mise)'),h('div','stats',null,...[['Misé',eur(mis)],['Bénéfice',(gain>=0?'+':'')+eur(gain)],['Rendement',mis?nf(Math.round(1000*gain/mis)/10,1)+' %':'–']].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),
+  h('p','ia','Réussite : '+(nbt?Math.round(100*win/nbt)+' %':'–')+'. Le gagné ou perdu se met à jour tout seul après les matchs.')));
  A.appendChild(h('p','mu','Le conseil de mise n’est pas une promesse : il suppose que mes probabilités sont justes. Ne joue que ce que tu peux perdre.'))}
 const cote2=p=>'une cote de '+(1/p*1.02).toFixed(2).replace('.',',');
 function crit(){const R=[['Forme des 5 derniers matchs','20 %','auto'],['Niveau des équipes','20 %','auto'],['Domicile / extérieur','15 %','auto'],['Attaque et défense','15 %','auto'],['Absences et blessures','10 %','manuel'],['Motivation et enjeux','10 %','manuel'],['Confrontations directes','5 %','manuel'],['Contexte tactique','5 %','manuel']];
@@ -218,10 +258,10 @@ const dlabel=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00
 function dayTabs(){const past=[-2,-1].map(dayStr).filter(d=>M.some(m=>m.d===d)),fut=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort().slice(0,3);
  [...past,...fut].forEach(d=>{const b=h('button',day==d?'on':'',dlabel(d));b.onclick=()=>{day=d;F.lg='';render()};$('tabs').appendChild(b)})}
 function pickRow(m){const op=[['x2:1','Victoire '+m.home,m.p1],['x2:N','Match nul',m.pN],['x2:2','Victoire '+m.away,m.p2],['x2:1N','1X : '+m.home+' ou nul',m.p1+m.pN],['x2:N2','X2 : '+m.away+' ou nul',m.pN+m.p2],['x2:12','1/2 : pas de nul',m.p1+m.p2],['btts:oui','BTTS oui',m.btts],['btts:non','BTTS non',1-m.btts]];
- if(m.o25!=null)op.push(['o25:plus','+2,5 buts',m.o25],['o25:moins','-2,5 buts',1-m.o25]);
+ if(m.o15!=null)op.push(['o15:plus','+1,5 buts',m.o15]);if(m.o25!=null)op.push(['o25:plus','+2,5 buts',m.o25],['o25:moins','-2,5 buts',1-m.o25]);
  const sel=h('select','inp');op.forEach(([v,t,p])=>{const o=h('option',null,t+' · '+pc(p));o.value=v;sel.appendChild(o)});sel.value='x2:'+m.fin;
- const b=h('button','addb','➕ Ajouter à mes pronos');b.onclick=()=>{const o=op.find(x=>x[0]===sel.value),[kd,sd]=sel.value.split(':');addBet(m,kd,sd,o[1],o[2])};
- return h('div','card',null,h('div','mu',m.lg+' · '+m.h),h('div','ttl',nm(m)),sel,h('div','lab',''),b)}
+ const b=h('button','addb','➕ Ajouter');b.onclick=()=>{const o=op.find(x=>x[0]===sel.value),[kd,sd]=sel.value.split(':');addBet(m,kd,sd,o[1],o[2])};
+ return h('div','card',null,h('div','mu',m.lg+' · '+m.h),h('div','ttl',nm(m)),h('div','gg',null,sel,b))}
 function render(){
  A.textContent='';['tabs','vtabs','flt'].forEach(i=>$(i).textContent='');
  [['m','⚽ Matchs'],['p','⭐ Mes pronos'],['n','🌍 Ligue des nations'],['c','🎯 Conseils'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
