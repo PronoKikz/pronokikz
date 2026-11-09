@@ -2,6 +2,10 @@ name: Configure Expo and build Pronokikz APK
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/expo-setup.yml'
 
 permissions:
   contents: write
