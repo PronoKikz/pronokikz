@@ -36,7 +36,7 @@ function predict(H,A){
    const H=st[c][f.homeTeam.id],A=st[c][f.awayTeam.id];if(!H||!A||H.g<3||A.g<3)continue;
    const x=predict(H,A);
    m={id:f.id,lg:f.competition.name,home:f.homeTeam.shortName||f.homeTeam.name,away:f.awayTeam.shortName||f.awayTeam.name,
-    p1:r3(x.p1),pN:r3(x.pN),p2:r3(x.p2),btts:r3(x.btts),o25:r3(x.o25),fm:x.fm,ia:'Estimation : forme, niveau, domicile/extérieur, attaque/défense. Score probable : '+x.sc}}
+    p1:r3(x.p1),pN:r3(x.pN),p2:r3(x.p2),btts:r3(x.btts),o25:r3(x.o25),fm:x.fm,ia:'Estimation : forme, niveau, domicile/extérieur, attaque/défense. Score probable : '+x.score}}
   if(m.bt===undefined){
    try{if(!sc[c]){await sleep(6500);sc[c]=(await get('/competitions/'+c+'/scorers?limit=60')).scorers||[]}
     const tm=m.p1>=m.p2?f.homeTeam:f.awayTeam,b=sc[c].filter(x=>x.team&&x.team.id===tm.id).sort((x,y)=>y.goals-x.goals)[0];
