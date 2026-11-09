@@ -39,6 +39,13 @@ function calib(hist,lg){const a=hist.filter(e=>e.lg===lg&&e.x),n=a.length;if(n<2
  const sa=sum(a.map(e=>e.r[0]+e.r[1])),sp=sum(a.map(e=>e.x[0]+e.x[1])),ha=sum(a.map(e=>e.r[0])),hp=sum(a.map(e=>e.x[0]));if(!sa||!sp||!hp)return{n,gf:1,hf:1};
  const k=n/(n+40),cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
  return{n,gf:r3(1+cl(sa/sp-1,-.15,.15)*k),hf:r3(1+cl((ha/sa)/(hp/sp)-1,-.1,.1)*k)}}
+// Calibration apprise sur l'historique : facteur de nuls et « température » (>1 = plus de contraste entre favori et outsider).
+function temp(hist){const a=hist.filter(e=>(e.q||e.p)&&e.r),n=a.length;if(n<15)return{n,T:1,dr:1};
+ const pd=a.reduce((s,e)=>s+(e.q||e.p)[1],0)/n,ad=a.filter(e=>e.r[0]===e.r[1]).length/n,k=n/(n+60),cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+ const dr=1+cl((ad/(pd||.25))-1,-.25,.25)*k;let best=1,bl=1e9;
+ for(let T=.8;T<=1.6001;T+=.02){let l=0;a.forEach(e=>{const q=e.q||e.p,o=e.r[0]>e.r[1]?0:e.r[0]==e.r[1]?1:2,w=[q[0],q[1]*dr,q[2]].map(p=>Math.pow(Math.max(p,1e-6),T)),s=w[0]+w[1]+w[2];l-=Math.log(w[o]/s)});if(l<bl){bl=l;best=T}}
+ return{n,T:r3(1+(best-1)*k),dr:r3(dr)}}
+const adj1x2=(x,TT)=>{const w=[x.p1,x.pN*TT.dr,x.p2].map(p=>Math.pow(Math.max(p,1e-6),TT.T)),s=w[0]+w[1]+w[2];return w.map(v=>v/s)};
 function predict(H,A,avg,when,hh,cal){
  const P=3,mid=(avg.h+avg.a)/2,sh=(s,n,a)=>(s+P*a)/(n+P);
  const mix=(venue,n,tot,w,ref,venRef)=>.5*sh(venue,n,venRef)/venRef+.5*sh(tot,w,ref)/ref;
@@ -83,7 +90,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
 (async()=>{
  const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
- const prev=pj.matches||[],hist=pj.hist||[],old=Object.fromEntries(prev.map(m=>[m.id,m]));
+ const prev=pj.matches||[],hist=pj.hist||[],old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
  const fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
   .filter(f=>CODES.includes(f.competition.code)&&day(new Date(f.utcDate))>=from&&day(new Date(f.utcDate))<=last);
  const st={},sc={},oc={},CAL={},out=[],seen=new Set(),cal=lg=>CAL[lg]||(CAL[lg]=calib(hist,lg));
@@ -98,9 +105,10 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   if(!m){
    const T=await loadStats(c),H=T[f.homeTeam.id],A=T[f.awayTeam.id];if(!H||!A||H.g<3||A.g<3)continue;
    const x=predict(H,A,T.avg,new Date(f.utcDate).getTime(),h2h(T.meets||[],f.homeTeam.id,f.awayTeam.id),cal(f.competition.name));
+   const cq=adj1x2(x,TT).map(r3);
    m={id:f.id,lg:f.competition.name,home:f.homeTeam.shortName||f.homeTeam.name,away:f.awayTeam.shortName||f.awayTeam.name,
-    p1:r3(x.p1),pN:r3(x.pN),p2:r3(x.p2),btts:r3(x.btts),o25:r3(x.o25),o15:r3(x.o15),scs:x.scs,fm:x.fm,f10:x.f10,ng:x.ng,hh:x.hh,x:x.x,
-    raw:{p1:r3(x.p1),pN:r3(x.pN),p2:r3(x.p2),o25:r3(x.o25)},b0:[r3(x.p1),r3(x.pN),r3(x.p2)],
+    p1:cq[0],pN:cq[1],p2:cq[2],btts:r3(x.btts),o25:r3(x.o25),o15:r3(x.o15),scs:x.scs,fm:x.fm,f10:x.f10,ng:x.ng,hh:x.hh,x:x.x,q:[r3(x.p1),r3(x.pN),r3(x.p2)],
+    raw:{p1:cq[0],pN:cq[1],p2:cq[2],o25:r3(x.o25)},b0:cq.slice(),
     ia:'Estimation : forme, niveau, domicile/extérieur, attaque/défense, confrontations, repos.'}}
   if(!m.lock){
    // 1) cotes du marché (une fois par jour)
@@ -121,12 +129,12 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null});seen.add(f.id)}
  // enregistrement définitif : un prono terminé entre dans l'historique une seule fois et n'est JAMAIS modifié ensuite
  const ids=new Set(hist.map(e=>e.i));
- out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push({i:m.id,d:m.d,lg:m.lg,p:[m.p1,m.pN,m.p2],b:m.btts,o:m.o25==null?null:m.o25,x:m.x||null,r:m.r,t:m.pt||null});ids.add(m.id)}});
+ out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push({i:m.id,d:m.d,lg:m.lg,p:[m.p1,m.pN,m.p2],b:m.btts,o:m.o25==null?null:m.o25,x:m.x||null,q:m.q||null,r:m.r,t:m.pt||null});ids.add(m.id)}});
  const H2=hist.slice(-3000),keep=day(off(-14));
  const all=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
- const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});
+ const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
  fs.writeFileSync('data.json',JSON.stringify({matches:all,hist:H2}));
  const fr=new Intl.DateTimeFormat('fr-FR',{...tz,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  fs.writeFileSync('data.js',`const DATE=${JSON.stringify(fr)};\nconst TODAY=${JSON.stringify(today)};\nconst UPDATED=${JSON.stringify(new Date().toISOString())};\nconst STAT=${JSON.stringify(aggregate(H2))};\nconst LEARN=${JSON.stringify(learn)};\nconst M=${JSON.stringify(all)};\n`);
- const nb={};all.forEach(m=>nb[m.d]=(nb[m.d]||0)+1);console.log(all.length+' matchs',JSON.stringify(nb),'| historique',H2.length,OD?'| cotes marché activées':'| sans cotes marché');
+ const nb={};all.forEach(m=>nb[m.d]=(nb[m.d]||0)+1);console.log(all.length+' matchs',JSON.stringify(nb),'| calibration T='+TT.T+' nuls×'+TT.dr+' (n='+TT.n+')','| historique',H2.length,OD?'| cotes marché activées':'| sans cotes marché');
 })().catch(e=>{console.error(e.message);process.exit(1)});

@@ -141,7 +141,7 @@ function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/
  if(m.ex)e.appendChild(h('p','ia','👥 '+m.ex));
  e.appendChild(c?h('div','fin','Score final '+c.s+'  ·  Résultat '+(c.r?'✅':'❌')+'  ·  BTTS '+(c.b?'✅':'❌')):h('p','ia','🤖 '+(m.ia||'')));return e}
 const NLG='Ligue des nations';
-let day=TD,view='m',F={lg:'',hi:false};
+let day=(()=>{const f=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort()[0];return f||TD})(),view='m',F={lg:'',hi:false};
 const dlab=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:00'))/864e5);return n==0?'Aujourd’hui':n==1?'Demain':new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})};
 const dayLabel=i=>{if(i==0)return'Aujourd’hui';if(i==1)return'Demain';const d=new Date(TD+'T12:00:00');d.setDate(d.getDate()+i);return d.toLocaleDateString('fr-FR',{weekday:'long'})};
 const dayStr=i=>{const d=new Date(TD+'T12:00:00');d.setDate(d.getDate()+i);return d.toISOString().slice(0,10)};
@@ -175,6 +175,7 @@ function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  A.appendChild(c);
  const items=[];L.filter(([,v])=>v.n>=8).forEach(([lg,v])=>{items.push([lg+' · 1N2',v.h/v.n,v.n]);items.push([lg+' · BTTS',v.b/v.n,v.n]);if(v.no>=8)items.push([lg+' · +2,5',v.o/v.no,v.no])});
  if(items.length){items.sort((a,b)=>a[1]-b[1]);A.appendChild(h('div','card',null,h('div','ttl','⚠️ Là où le modèle se trompe le plus'),...items.slice(0,3).map(([l,p,n])=>h('div','l',null,h('span',null,l),h('span',null,Math.round(100*p)+'% sur '+n)))))}
+ const G=typeof LEARN!=='undefined'&&LEARN._g;if(G&&G.n>=15)A.appendChild(h('div','card',null,h('div','ttl','🔧 Correction automatique du modèle'),h('p','ia','Calculée sur '+G.n+' matchs : contraste favori/outsider ×'+G.T.toFixed(2).replace('.',',')+' · nuls ×'+G.dr.toFixed(2).replace('.',',')+'. Plus il y a de matchs enregistrés, plus la correction est fiable (au départ elle est très prudente).')));
  A.appendChild(h('p','mu','Les écarts constatés corrigent peu à peu les prochains calculs (buts attendus, avantage du domicile), dès 20 matchs par championnat.'))}
 let BETS=[],BANK=100;try{BETS=JSON.parse(localStorage.getItem('pfbets')||'[]');BANK=+localStorage.getItem('pfbank')||100}catch(e){}
 const saveB=()=>{try{localStorage.setItem('pfbets',JSON.stringify(BETS));localStorage.setItem('pfbank',String(BANK))}catch(e){}};
@@ -185,7 +186,7 @@ const eur=x=>(Math.round(x*100)/100).toFixed(2).replace('.',',')+' €';
 function mesPronos(){BETS.forEach(betState);saveB();
  const cand=M.filter(m=>m.d===day&&!m.r&&m.p1!=null);
  A.appendChild(h('div','card',null,h('div','ttl','➕ Choisir un pari'),h('p','ia','Choisis le jour ci-dessus, puis un match et le type de pari. Il s’ajoute à ta liste plus bas.')));
- if(!cand.length)A.appendChild(h('p','mu','Aucun match à venir ce jour-là. Change de jour ou touche « Prochains matchs ».'));
+ if(!cand.length)A.appendChild(h('p','mu','Aucun match à venir ce jour-là. Change de jour avec les onglets ci-dessus.'));
  cand.forEach(m=>A.appendChild(pickRow(m)));
  const bank=h('input','inp');bank.type='number';bank.value=BANK;bank.onchange=()=>{BANK=Math.max(1,+bank.value||100);saveB();render()};
  A.appendChild(h('div','card',null,h('div','ttl','💰 Ma cagnotte'),h('div','lab','Montant total que je peux jouer (€)'),bank,h('p','ia','Sert au conseil de mise. Les données restent sur ton téléphone.')));
@@ -213,11 +214,9 @@ function nations(){const L=M.filter(m=>m.lg===NLG&&m.d>=TD).sort((a,b)=>(a.d+a.h
  const open=L.filter(isOpen);
  if(open.length>1)cyc('nlsafe',safeCands(open),'reco','Combiné safe Ligue des nations (cote ~2,5)','Sélections prudentes (double chance), cote visée autour de 2,5.');
  [...new Set(L.map(m=>m.d))].forEach(d=>{A.appendChild(h('h2',null,new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})));L.filter(m=>m.d===d).forEach(m=>A.appendChild(card(m)))})}
-const dayLab=i=>['Avant-hier','Hier','Aujourd’hui','Demain','Après-demain'][i+2];
-function dayTabs(){[-2,-1,0,1,2].forEach(i=>{const d=dayStr(i),b=h('button',day==d?'on':'',dayLab(i));b.onclick=()=>{day=d;F.lg='';render()};$('tabs').appendChild(b)});
- const dt=h('input','inp');dt.type='date';dt.value=day;dt.onchange=()=>{if(dt.value){day=dt.value;F.lg='';render()}};
- const nx=[...new Set(M.filter(m=>m.d>TD).map(m=>m.d))].sort()[0],nb=h('button','addb','▶ Prochains matchs'+(nx?' ('+nx.slice(8)+'/'+nx.slice(5,7)+')':''));nb.onclick=()=>{if(nx){day=nx;F.lg='';render()}};
- A.appendChild(h('div','gg',null,h('div',null,null,h('div','lab','Choisir une date'),dt),h('div',null,null,h('div','lab',''),nb)))}
+const dlabel=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:00'))/864e5);return n==-2?'Avant-hier':n==-1?'Hier':n==0?'Aujourd’hui':n==1?'Demain':new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})};
+function dayTabs(){const past=[-2,-1].map(dayStr).filter(d=>M.some(m=>m.d===d)),fut=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort().slice(0,3);
+ [...past,...fut].forEach(d=>{const b=h('button',day==d?'on':'',dlabel(d));b.onclick=()=>{day=d;F.lg='';render()};$('tabs').appendChild(b)})}
 function pickRow(m){const op=[['x2:1','Victoire '+m.home,m.p1],['x2:N','Match nul',m.pN],['x2:2','Victoire '+m.away,m.p2],['x2:1N','1X : '+m.home+' ou nul',m.p1+m.pN],['x2:N2','X2 : '+m.away+' ou nul',m.pN+m.p2],['x2:12','1/2 : pas de nul',m.p1+m.p2],['btts:oui','BTTS oui',m.btts],['btts:non','BTTS non',1-m.btts]];
  if(m.o25!=null)op.push(['o25:plus','+2,5 buts',m.o25],['o25:moins','-2,5 buts',1-m.o25]);
  const sel=h('select','inp');op.forEach(([v,t,p])=>{const o=h('option',null,t+' · '+pc(p));o.value=v;sel.appendChild(o)});sel.value='x2:'+m.fin;
@@ -230,8 +229,8 @@ function render(){
  if(view=='a'){apprentissage();return}
  dayTabs();
  if(view=='p'){mesPronos();return}
- const dm=M.filter(m=>m.d===day&&m.lg!==NLG),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
- if(!dm.length){A.appendChild(h('p','mu',day<TD?'Aucun prono enregistré ce jour-là (l’historique garde 14 jours).':'Aucun match ce jour-là dans les championnats suivis. Touche « Prochains matchs » pour aller au suivant.'));return}
+ const dm=M.filter(m=>m.d===day),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
+ if(!dm.length){A.appendChild(h('p','mu',day<TD?'Aucun prono enregistré ce jour-là (l’historique garde 14 jours).':'Aucun match à afficher pour ce jour.'));return}
  if(view=='c'){conseils(open);return}
  const fn=dm.map(chk).filter(Boolean);
  if(fn.length){const w=f=>fn.filter(x=>x[f]).length,o=fn.filter(x=>x.o!=null);
