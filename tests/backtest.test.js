@@ -2,9 +2,9 @@
 const assert = require('node:assert/strict');
 const { evaluate } = require('../backtest');
 const report = evaluate([
-  { lg: 'Ligue 1', p: [0.7, 0.2, 0.1], r: [2, 0], b: 0.8, o: 0.7 },
-  { lg: 'Ligue 1', p: [0.2, 0.3, 0.5], r: [1, 1], b: 0.4, o: 0.3 },
-  { lg: 'Premier League', p: [0.1, 0.2, 0.7], r: [0, 2], b: 0.7, o: 0.8 }
+  { lg: 'Ligue 1', p: [0.7, 0.2, 0.1], r: [2, 0], b: 0.2, o: 0.3 },
+  { lg: 'Ligue 1', p: [0.2, 0.3, 0.5], r: [1, 1], b: 0.8, o: 0.3 },
+  { lg: 'Premier League', p: [0.1, 0.2, 0.7], r: [0, 2], b: 0.2, o: 0.3 }
 ]);
 assert.equal(report.total.matches, 3);
 assert.equal(report.total.accuracy, 66.7);
