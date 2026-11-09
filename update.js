@@ -124,11 +124,11 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  // Ligue des nations UEFA : calendrier et scores via le scoreboard public ESPN.
  // Les rencontres sont normalisées dans le même format que les autres compétitions.
  try {
-  const ranges=[['20260924','20260930'],['20261001','20261007'],['20261008','20261014'],['20261015','20261021'],['20261022','20261028'],['20261029','20261031'],['20261101','20261107'],['20261108','20261114'],['20261115','20261117']];
-  const packs=await Promise.all(ranges.map(async ([a,b])=>{
-   const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates='+a+'-'+b+'';
+  const ranges=['20260924','20260925','20260926','20260927','20260928','20260929','20261001','20261002','20261003','20261004','20261005','20261006','20261112','20261113','20261114','20261115','20261116','20261117'];
+  const packs=await Promise.all(ranges.map(async date=>{
+   const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates='+date;
    const response=await fetch(url,{headers:{'Accept':'application/json'}});
-   if(!response.ok)throw new Error('ESPN '+response.status+' sur '+a);
+   if(!response.ok){console.log('ESPN '+response.status+' sur '+date);return []}
    const json=await response.json();
    return Array.isArray(json.events)?json.events:[];
   }));
