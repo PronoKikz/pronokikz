@@ -81,10 +81,10 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const s=[['1',p1],['N',pN],['2',p2]].sort((a,b)=>b[1]-a[1])[0],d=[['1N',p1+pN],['N2',pN+p2],['12',p1+p2]].sort((a,b)=>b[1]-a[1])[0];
  return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin:e&&e.fin?e.fin:(s[1]>=.55?s[0]:d[0]),ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
 (async()=>{
- const today=day(new Date()),from=day(off(-1)),last=day(off(7)),now=new Date(),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
+ const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
  const prev=pj.matches||[],hist=pj.hist||[],old=Object.fromEntries(prev.map(m=>[m.id,m]));
- const fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(8).toISOString().slice(0,10)}`)).matches
+ const fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
   .filter(f=>CODES.includes(f.competition.code)&&day(new Date(f.utcDate))>=from&&day(new Date(f.utcDate))<=last);
  const st={},sc={},oc={},CAL={},out=[],seen=new Set(),cal=lg=>CAL[lg]||(CAL[lg]=calib(hist,lg));
  const loadStats=async c=>{if(!st[c]){try{await sleep(6500);const cur=(await get('/competitions/'+c+'/matches?status=FINISHED')).matches||[];st[c]=stats(cur);let pm=[];
