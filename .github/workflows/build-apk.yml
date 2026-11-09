@@ -43,7 +43,7 @@ jobs:
       - name: Download generated APK
         run: |
           BUILD_ID="$(node -e "const b=require('./eas-build.json'); const x=Array.isArray(b)?b[0]:b; if(!x.id) process.exit(1); process.stdout.write(x.id)")"
-          eas build:download --id "$BUILD_ID" --path ./Pronokikz.apk
+          eas build:download "$BUILD_ID" --output ./Pronokikz.apk
 
       - name: Publish APK as the latest GitHub release
         uses: softprops/action-gh-release@v2
