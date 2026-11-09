@@ -1,15 +1,17 @@
 name: Backtest chronologique Pronokikz
 on:
+  schedule:
+    - cron: '0 5 * * 1' # Chaque lundi à 05:00 UTC, avant le rapport de surveillance.
   workflow_dispatch:
   # Lancement manuel depuis l'onglet Actions de GitHub.
 jobs:
   walkforward:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - name: Vérifier le script
         run: node --check walkforward.js
       - name: Lancer le backtest chronologique
