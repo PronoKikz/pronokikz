@@ -1,10 +1,21 @@
 'use strict';
 const fs = require('node:fs');
 
+function isProbability(value) {
+  return Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
 function evaluate(history) {
-  const valid = (history || []).filter(e => Array.isArray(e.p) && e.p.length === 3 &&
-    e.p.every(Number.isFinite) && e.p.every(p => p >= 0 && p <= 1) &&
-    Array.isArray(e.r) && e.r.length === 2 && e.r.every(Number.isFinite));
+  const valid = (history || []).filter(e => {
+    if (!e || !Array.isArray(e.p) || e.p.length !== 3 || !e.p.every(isProbability)) return false;
+    // Refuse malformed 1N2 distributions instead of silently scoring impossible probabilities.
+    if (Math.abs(e.p.reduce((sum, value) => sum + value, 0) - 1) > 0.005) return false;
+    if (!Array.isArray(e.r) || e.r.length !== 2 ||
+        !e.r.every(value => Number.isInteger(value) && value >= 0)) return false;
+    if (e.b != null && !isProbability(e.b)) return false;
+    if (e.o != null && !isProbability(e.o)) return false;
+    return true;
+  });
   const blank = () => ({ n: 0, correct: 0, brier: 0, logLoss: 0, bttsN: 0, bttsCorrect: 0, over25N: 0, over25Correct: 0 });
   const total = blank();
   const leagues = {};
@@ -38,7 +49,12 @@ function evaluate(history) {
     bttsAccuracy: g.bttsN ? +(100 * g.bttsCorrect / g.bttsN).toFixed(1) : null,
     over25Accuracy: g.over25N ? +(100 * g.over25Correct / g.over25N).toFixed(1) : null
   });
-  return { total: finish(total), leagues: Object.fromEntries(Object.entries(leagues).map(([name, value]) => [name, finish(value)])), warning: valid.length < 100 ? 'Échantillon trop petit pour conclure : viser au moins 100 matchs, idéalement plusieurs centaines.' : null };
+  return {
+    total: finish(total),
+    leagues: Object.fromEntries(Object.entries(leagues).map(([name, value]) => [name, finish(value)])),
+    ignored: (history || []).length - valid.length,
+    warning: valid.length < 100 ? 'Échantillon trop petit pour conclure : viser au moins 100 matchs, idéalement plusieurs centaines.' : null
+  };
 }
 
 if (require.main === module) {
