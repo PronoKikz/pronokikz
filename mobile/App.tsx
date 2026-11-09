@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 
 const GREEN = '#20D99A', BG = '#080D12', CARD = '#121B23', MUTED = '#82909C';
-const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.24:3001').replace(/\/$/, '');
+// Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.\nconst DATA_URL = 'https://raw.githubusercontent.com/quintrickilian10-jpg/pronokikz/main/data.json';
 
 type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; btts?: number; o25?: number; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
 type Stats = { total: number; upcoming: number; finished: number; evaluated: number; correct: number; accuracy: number | null };
@@ -13,7 +13,7 @@ const prediction = (m: Match) => { if (m.r?.length === 2) return m.r[0] + ' - ' 
 export default function App() {
  const [tab,setTab]=useState('Accueil'),[matches,setMatches]=useState<Match[]>([]),[stats,setStats]=useState<Stats|null>(null),[selected,setSelected]=useState<Match|null>(null);
  const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState(''),[updatedAt,setUpdatedAt]=useState<string|null>(null),[apiOnline,setApiOnline]=useState(false);
- const load=useCallback(async()=>{try{setError('');const [mr,sr]=await Promise.all([fetch(API_BASE+'/api/matches'),fetch(API_BASE+'/api/stats')]);if(!mr.ok)throw new Error('Serveur indisponible ('+mr.status+')');const data=await mr.json();setMatches(Array.isArray(data.matches)?data.matches:[]);setUpdatedAt(data.updatedAt||null);setApiOnline(true);if(sr.ok)setStats(await sr.json());}catch(e:any){setApiOnline(false);setError(e?.message||'Impossible de contacter Pronokikz.');}finally{setLoading(false);setRefreshing(false);}},[]);
+ const load=useCallback(async()=>{try{setError('');const response=await fetch(DATA_URL+'?t='+Date.now());if(!response.ok)throw new Error('Données indisponibles ('+response.status+').');const data=await response.json();const list=Array.isArray(data.matches)?data.matches:[];setMatches(list);setUpdatedAt(data.updatedAt||null);const finished=list.filter((m:Match)=>Array.isArray(m.r)&&m.r.length===2);const upcoming=list.filter((m:Match)=>!Array.isArray(m.r)||m.r.length!==2);let correct=0,evaluated=0;for(const m of finished){if(m.p1==null||m.pN==null||m.p2==null)continue;const predicted=m.p1>=m.pN&&m.p1>=m.p2?'1':m.pN>=m.p1&&m.pN>=m.p2?'N':'2';const actual=m.r![0]>m.r![1]?'1':m.r![0]===m.r![1]?'N':'2';evaluated++;if(predicted===actual)correct++;}setStats({total:list.length,upcoming:upcoming.length,finished:finished.length,evaluated,correct,accuracy:evaluated?Math.round(correct/evaluated*100):null});setApiOnline(true);}catch(e:any){setApiOnline(false);setError(e?.message||'Impossible de charger les données Pronokikz.');}finally{setLoading(false);setRefreshing(false);}},[]);
  useEffect(()=>{load();},[load]);
  const upcoming=useMemo(()=>matches.filter(m=>!m.r).sort((a,b)=>(a.d||'').concat(a.h||'').localeCompare((b.d||'').concat(b.h||''))),[matches]);
  const finished=useMemo(()=>matches.filter(m=>!!m.r),[matches]);
