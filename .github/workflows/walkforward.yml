@@ -1,0 +1,19 @@
+name: Backtest chronologique Pronokikz
+on:
+  workflow_dispatch:
+  # Lancement manuel depuis l'onglet Actions de GitHub.
+jobs:
+  walkforward:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Vérifier le script
+        run: node --check walkforward.js
+      - name: Lancer le backtest chronologique
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY || secrets.FOOTBALL_DATA_KEY }}
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY || secrets.FOOTBALL_DATA_API_KEY }}
+        run: node walkforward.js
