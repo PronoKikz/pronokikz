@@ -1,0 +1,51 @@
+name: Configure Expo and build Pronokikz APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  configure-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Expo Updates
+        run: npx expo install expo-updates
+
+      - name: Link Expo project
+        run: eas init --force --non-interactive
+
+      - name: Configure over-the-air updates
+        run: eas update:configure --non-interactive
+
+      - name: Save generated Expo configuration to GitHub
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/app.json mobile/package.json mobile/package-lock.json mobile/eas.json
+          git diff --cached --quiet || git commit -m "chore: configure Expo Updates [skip ci]"
+          git push
+
+      - name: Build installable Android APK
+        working-directory: mobile
+        run: eas build --platform android --profile preview --non-interactive --wait
