@@ -1,0 +1,60 @@
+name: Build and publish Pronokikz APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile/**"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Build Android APK with EAS
+        working-directory: mobile
+        run: eas build --platform android --profile preview --non-interactive --wait --json > ../eas-build.json
+
+      - name: Download generated APK
+        run: |
+          BUILD_ID="$(node -e "const b=require('./eas-build.json'); const x=Array.isArray(b)?b[0]:b; if(!x.id) process.exit(1); process.stdout.write(x.id)")"
+          eas build:download --id "$BUILD_ID" --path ./Pronokikz.apk
+
+      - name: Publish APK as the latest GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Pronokikz - version ${{ github.run_number }}
+          body: |
+            Installation Android de Pronokikz.
+
+            Téléchargez **Pronokikz.apk**, ouvrez le fichier sur votre téléphone Android et autorisez l'installation si Android le demande.
+
+            Lien permanent vers la dernière version : https://github.com/${{ github.repository }}/releases/latest/download/Pronokikz.apk
+          files: Pronokikz.apk
+          make_latest: true
