@@ -5,7 +5,23 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "ios": { "supportsTablet": true },
-    "android": { "package": "fr.pronokikz.app" }
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "fr.pronokikz.app"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e73e2f6d-a530-4a82-a557-2ad7674a38fd"
+      }
+    },
+    "owner": "haapzz",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e73e2f6d-a530-4a82-a557-2ad7674a38fd"
+    }
   }
 }
