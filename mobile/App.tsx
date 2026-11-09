@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 
 const GREEN = '#20D99A', BG = '#080D12', CARD = '#121B23', MUTED = '#82909C';
-// Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.\nconst DATA_URL = 'https://raw.githubusercontent.com/quintrickilian10-jpg/pronokikz/main/data.json';
+// Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.
+const DATA_URL = 'https://raw.githubusercontent.com/quintrickilian10-jpg/pronokikz/main/data.json';
 
 type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; btts?: number; o25?: number; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
 type Stats = { total: number; upcoming: number; finished: number; evaluated: number; correct: number; accuracy: number | null };
