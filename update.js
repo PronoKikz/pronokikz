@@ -1,5 +1,5 @@
 // Met à jour les pronostics et l'historique Pronokikz via football-data.org
-require('dotenv').config();
+try { require('dotenv').config(); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 // Critères automatiques : forme (5 derniers), niveau, domicile/extérieur, attaque/défense.
 // Absences, enjeux, tactique, confrontations directes : ajustés à la main dans expert.js (champ aj).
 const fs=require('fs');
