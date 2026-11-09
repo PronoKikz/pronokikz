@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Pronokikz",
+    "slug": "pronokikz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": { "supportsTablet": true },
+    "android": { "package": "fr.pronokikz.app" }
+  }
+}
