@@ -127,7 +127,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const H2=hist.slice(-3000),keep=day(off(-14));
  const all=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
- fs.writeFileSync('data.json',JSON.stringify({matches:all,hist:H2}));
+ fs.writeFileSync('data.json',JSON.stringify({updatedAt:new Date().toISOString(),matches:all,hist:H2}));
  const fr=new Intl.DateTimeFormat('fr-FR',{...tz,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  fs.writeFileSync('data.js',`const DATE=${JSON.stringify(fr)};\nconst TODAY=${JSON.stringify(today)};\nconst UPDATED=${JSON.stringify(new Date().toISOString())};\nconst STAT=${JSON.stringify(aggregate(H2))};\nconst LEARN=${JSON.stringify(learn)};\nconst M=${JSON.stringify(all)};\n`);
  const nb={};all.forEach(m=>nb[m.d]=(nb[m.d]||0)+1);console.log(all.length+' matchs',JSON.stringify(nb),'| calibration T='+TT.T+' nuls×'+TT.dr+' (n='+TT.n+')','| historique',H2.length,OD?'| cotes marché activées':'| sans cotes marché');
