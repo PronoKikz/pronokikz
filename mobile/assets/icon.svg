@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+ <radialGradient id="bg"><stop offset="0" stop-color="#12351d"/><stop offset="1" stop-color="#020805"/></radialGradient>
+ <radialGradient id="ball" cx="35%" cy="25%"><stop offset="0" stop-color="#fff"/><stop offset=".72" stop-color="#e7edf0"/><stop offset="1" stop-color="#8d989c"/></radialGradient>
+ <linearGradient id="green" x2="1" y2="1"><stop stop-color="#b7ff32"/><stop offset=".5" stop-color="#39f000"/><stop offset="1" stop-color="#00a92b"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="18" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <clipPath id="clip"><circle cx="512" cy="530" r="350"/></clipPath>
+</defs>
+<rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+<circle cx="512" cy="530" r="390" fill="none" stroke="#39f000" stroke-width="22" opacity=".18" filter="url(#glow)"/>
+<circle cx="512" cy="530" r="365" fill="url(#ball)" stroke="url(#green)" stroke-width="20"/>
+<g clip-path="url(#clip)" fill="#111a1c" stroke="#aab5b8" stroke-width="13" stroke-linejoin="round">
+ <path d="M512 350 600 414 566 518 458 518 424 414Z"/>
+ <path d="M260 390 370 420 394 535 305 600 205 535Z"/>
+ <path d="M764 390 819 535 719 600 630 535 654 420Z"/>
+ <path d="M300 680 405 620 458 710 425 825 310 830Z"/>
+ <path d="M724 680 714 830 599 825 566 710 619 620Z"/>
+ <path d="M512 760 566 710 599 825 512 875 425 825 458 710Z"/>
+</g>
+<circle cx="512" cy="530" r="365" fill="none" stroke="#dfffd0" stroke-width="5" opacity=".65"/>
+<path d="M512 170 545 215 600 225 560 264 570 320 512 292 454 320 464 264 424 225 479 215Z" fill="#f4c542" stroke="#9c6a08" stroke-width="12"/>
+<path d="M512 245 512 300" stroke="#9c6a08" stroke-width="12"/>
+<text x="512" y="680" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="510" font-weight="900" font-style="italic" fill="#fff" stroke="#061009" stroke-width="44" paint-order="stroke" filter="url(#glow)">K</text>
+<text x="512" y="680" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="510" font-weight="900" font-style="italic" fill="#fff" stroke="url(#green)" stroke-width="18" paint-order="stroke">K</text>
+<path d="M160 820 Q512 960 864 820" fill="none" stroke="url(#green)" stroke-width="18" stroke-linecap="round" filter="url(#glow)"/>
+</svg>
