@@ -2,7 +2,7 @@
 const { model } = require('./predictor');
 const DAY = 86400000;
 const HALF_LIFE_DAYS = 120;
-const MIN_LEAGUE_MATCHES = 20;
+const MIN_EFFECTIVE_LEAGUE_MATCHES = 20;
 const MIN_TEAM_MATCHES = 3;
 
 function isFinished(m) {
@@ -41,14 +41,14 @@ function venueRates(team, venue, league) {
 function predictBeforeMatch(match, allMatches) {
   const kickoff=Date.parse(match.utcDate);
   if (!Number.isFinite(kickoff)) return null;
-  const comp=match.competition&&(match.competition.code||match.competition.id||match.competition.name);
+  const comp=match.competition&&(match.competition.code||match.competition.id||match.competition.name);\n  // Sans identifiant de compétition fiable, ne jamais mélanger les statistiques de plusieurs ligues.\n  if (comp == null) return null;
   const prior=allMatches.filter(m=>{
     if (!isFinished(m)||Date.parse(m.utcDate)>=kickoff) return false;
     const key=m.competition&&(m.competition.code||m.competition.id||m.competition.name);
-    return comp==null||key===comp;
+    return key===comp;
   });
   const league=weightedStats(prior,kickoff), home=league.teams.get(match.homeTeam.id), away=league.teams.get(match.awayTeam.id);
-  if (league.leagueGames<MIN_LEAGUE_MATCHES||!home||!away||home.games<MIN_TEAM_MATCHES||away.games<MIN_TEAM_MATCHES) return null;
+  if (league.leagueGames<MIN_EFFECTIVE_LEAGUE_MATCHES||!home||!away||home.games<MIN_TEAM_MATCHES||away.games<MIN_TEAM_MATCHES) return null;
   const h=venueRates(home,'home',league), a=venueRates(away,'away',league);
   const lh=Math.max(.15,Math.min(4.5,league.homeAverage*h.attack*a.defence));
   const la=Math.max(.15,Math.min(4.5,league.awayAverage*a.attack*h.defence));
