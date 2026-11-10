@@ -45,13 +45,14 @@ jobs:
         run: eas build --platform android --profile preview --non-interactive --wait --json > ../eas-build.json
 
       - name: Download generated APK
+        working-directory: mobile
         run: |
-          BUILD_ID="$(node -e "const b=require('./eas-build.json'); const x=Array.isArray(b)?b[0]:b; if(!x.id) process.exit(1); process.stdout.write(x.id)")"
+          BUILD_ID="$(node -e "const b=require('../eas-build.json'); const x=Array.isArray(b)?b[0]:b; if(!x.id) process.exit(1); process.stdout.write(x.id)")"
           eas build:download --build-id "$BUILD_ID" --non-interactive --json > ./eas-download.json
           APK_PATH="$(node -e "const d=require('./eas-download.json'); if(!d.path) process.exit(1); process.stdout.write(d.path)")"
           test -f "$APK_PATH"
-          cp "$APK_PATH" ./Pronokikz.apk
-          test -s ./Pronokikz.apk
+          cp "$APK_PATH" ../Pronokikz.apk
+          test -s ../Pronokikz.apk
 
       - name: Publish APK as the latest GitHub release
         uses: softprops/action-gh-release@v2
