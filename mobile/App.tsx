@@ -3,7 +3,7 @@ import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, Scro
 
 const GREEN = '#4DA3FF', BG = '#080D12', CARD = '#121B23', MUTED = '#82909C';
 // Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.
-const DATA_URL = 'https://raw.githubusercontent.com/quintrickilian10-jpg/pronokikz/main/data.json';
+const DATA_URL = 'https://raw.githubusercontent.com/PronoKikz/pronokikz/main/data.json';
 
 type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; btts?: number; o25?: number; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
 type Stats = { total: number; upcoming: number; finished: number; evaluated: number; correct: number; accuracy: number | null };
