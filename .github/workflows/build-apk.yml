@@ -8,6 +8,13 @@ on:
     paths:
       - "mobile/**"
       - ".github/workflows/build-apk.yml"
+      # Les changements JavaScript/TypeScript de l'interface passent par Expo Updates.
+      # Un nouvel APK reste réservé aux changements natifs, de configuration ou de dépendances.
+      - "!mobile/App.tsx"
+      - "!mobile/**/*.tsx"
+      - "!mobile/**/*.ts"
+      - "!mobile/**/*.js"
+      - "!mobile/**/*.md"
 
 permissions:
   contents: write
