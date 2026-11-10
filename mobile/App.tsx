@@ -74,6 +74,17 @@ export default function App() {
  const upcoming=useMemo(()=>matches.filter(m=>!m.r).sort((a,b)=>(a.d||'').concat(a.h||'').localeCompare((b.d||'').concat(b.h||''))),[matches]);
  const finished=useMemo(()=>matches.filter(m=>!!m.r),[matches]);
  const leagueOptions=useMemo(()=>['Toutes',...Array.from(new Set(matches.map(m=>m.lg).filter((x):x is string=>!!x))).sort((a,b)=>a.localeCompare(b,'fr'))],[matches]); const visible=useMemo(()=>upcoming.filter(m=>leagueFilter==='Toutes'||m.lg===leagueFilter),[upcoming,leagueFilter]);
+ const leagueStats=useMemo(()=>{
+  const groups:Record<string,{evaluated:number;correct:number}>={};
+  matches.forEach(m=>{
+   if(!m.lg||!m.r||m.r.length!==2||m.p1==null||m.pN==null||m.p2==null)return;
+   const g=groups[m.lg]||(groups[m.lg]={evaluated:0,correct:0});
+   const predicted=m.p1>=m.pN&&m.p1>=m.p2?'1':m.pN>=m.p1&&m.pN>=m.p2?'N':'2';
+   const actual=m.r[0]>m.r[1]?'1':m.r[0]===m.r[1]?'N':'2';
+   g.evaluated++;if(predicted===actual)g.correct++;
+  });
+  return Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0],'fr'));
+ },[matches]);
  const combos=useMemo(()=>({
   safe:buildCombo(upcoming,2,4,safeSeed+11),
   medium:buildCombo(upcoming,6,8,mediumSeed+29),
@@ -105,7 +116,7 @@ export default function App() {
     {tab==='Matchs'&&<><Text style={s.title}>Tous les matchs</Text><Text style={s.heroDesc}>Rencontres à venir et analyses disponibles.</Text>{!loading&&!error&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filters} contentContainerStyle={s.filtersContent}>{leagueOptions.map(name=><Pressable key={name} onPress={()=>setLeagueFilter(name)} style={[s.filterChip,leagueFilter===name&&s.filterChipActive]}><Text style={[s.filterText,leagueFilter===name&&s.filterTextActive]}>{name}</Text></Pressable>)}</ScrollView>}{loading?<ActivityIndicator color={GREEN}/>:error?<Text style={s.error}>{error}</Text>:visible.map(m=><MatchCard key={String(m.id)} match={m}/>)}{!loading&&!error&&!visible.length&&<Text style={s.info}>{leagueFilter==='Toutes'?'Aucun match à venir pour le moment.':'Aucune rencontre à venir pour cette compétition. Les prochains matchs apparaîtront automatiquement dès leur publication.'}</Text>}</>}
     {tab==='Mon conseil'&&<><Text style={s.title}>Mon conseil</Text><Text style={s.heroDesc}>Des combinés construits à partir des probabilités estimées des matchs à venir.</Text><ComboCard title="SAFE · COTE 2 À 4" subtitle="Priorité aux marchés les plus probables disponibles." combo={combos.safe} onReroll={()=>setSafeSeed(x=>x+1)}/><ComboCard title="OBJECTIF · COTE 6/7" subtitle="Combiné à cote plus élevée, en conservant les probabilités individuelles les plus fortes." combo={combos.medium} onReroll={()=>setMediumSeed(x=>x+1)}/><ComboCard title="GROSSE COTE · 40" subtitle="Combiné long : le risque de perdre l'ensemble est très élevé." combo={combos.high} onReroll={()=>setHighSeed(x=>x+1)}/><Text style={s.disclaimer}>Important : les cotes affichées sont théoriques, calculées comme l'inverse des probabilités du modèle. Ce ne sont pas les cotes d'un bookmaker. Les probabilités de plusieurs matchs ne sont pas parfaitement indépendantes ; aucun combiné n'est garanti.</Text></>}
     {tab==='Résultats'&&<><Text style={s.title}>Résultats & historique</Text>{loading?<ActivityIndicator color={GREEN}/>:error?<Text style={s.error}>{error}</Text>:finished.map(m=><MatchCard key={String(m.id)} match={m}/>)}{!finished.length&&<Text style={s.info}>Les résultats apparaîtront après la mise à jour des données.</Text>}</>}
-    {tab==='Stats'&&<><Text style={s.title}>Statistiques Pronokikz</Text><View style={s.statsRow}><StatBox label="Matchs" value={stats?.total??matches.length}/><StatBox label="Évalués" value={stats?.evaluated??0}/><StatBox label="Bons pronos" value={stats?.correct??0}/></View><View style={s.card}><Text style={s.sectionTitle}>Précision 1N2</Text><Text style={s.bigNumber}>{stats?.accuracy==null?'—':stats.accuracy+'%'}</Text><Text style={s.info}>Calculée sur les matchs terminés disposant d'un pronostic et d'un score final.</Text></View></>}
+    {tab==='Stats'&&<><Text style={s.title}>Statistiques Pronokikz</Text><View style={s.statsRow}><StatBox label="Matchs" value={stats?.total??matches.length}/><StatBox label="Évalués" value={stats?.evaluated??0}/><StatBox label="Bons pronos" value={stats?.correct??0}/></View><View style={s.card}><Text style={s.sectionTitle}>Précision 1N2 globale</Text><Text style={s.bigNumber}>{stats?.accuracy==null?'—':stats.accuracy+'%'}</Text><Text style={s.info}>Calculée sur les matchs terminés disposant d'un pronostic et d'un score final.</Text></View><Text style={s.sectionTitle}>Performance par compétition</Text>{leagueStats.length?leagueStats.map(([name,g])=><View key={name} style={s.card}><View style={s.footerRow}><Text style={s.comboTitle}>{name}</Text><Text style={s.comboProb}>{g.evaluated?Math.round(g.correct/g.evaluated*100)+'%':'—'}</Text></View><Text style={s.info}>{g.correct} bons pronostics sur {g.evaluated} matchs évalués</Text></View>):<Text style={s.info}>Les statistiques par compétition apparaîtront dès que les premiers matchs seront terminés et évalués.</Text>}</>}
    </>}
    {!!updatedAt&&<Text style={s.updated}>Données mises à jour : {new Date(updatedAt).toLocaleString('fr-FR')}</Text>}<Text style={s.bottom}>PRONOKIKZ • VERSION 1.0</Text>
   </ScrollView>
