@@ -130,7 +130,7 @@ export default function App() {
    const league=(m.lg||'Compétition non classée').trim();
    // En UWCL, chaque date calendaire a son propre combiné.
    let round='Tous les matchs à venir';
-   if(league.toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').includes('champions feminine')){
+   if(league.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes('champions feminine')){
     const date=m.d||'';
     if(date){
      const day=new Date(date+'T12:00:00');
@@ -165,7 +165,7 @@ export default function App() {
   <Pressable style={s.rerollButton} onPress={onReroll}><Text style={s.rerollText}>↻ Relancer ce combiné</Text></Pressable>
  </View>;
 
- const competitionAccent=(league:string)=>{const name=league.toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');if(name.includes('feminin')||name.includes('women'))return '#F472B6';if(name.includes('champions league')||name.includes('ligue des champions'))return '#60A5FA';if(name.includes('nations'))return '#34D399';return '#FB923C';};
+ const competitionAccent=(league:string)=>{const name=league.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(name.includes('feminin')||name.includes('women'))return '#F472B6';if(name.includes('champions league')||name.includes('ligue des champions'))return '#60A5FA';if(name.includes('nations'))return '#34D399';return '#FB923C';};
  const Probability=({label,value,active=false}:{label:string;value?:number;active?:boolean})=><View style={[s.probCell,active&&s.probCellActive]}><Text style={[s.probLabel,active&&s.probLabelActive]}>{label}</Text><Text style={[s.probValue,active&&s.probValueActive]}>{pct(value)}</Text></View>;
  const winningOutcome=(m:Match)=>{if(m.p1==null||m.pN==null||m.p2==null)return null;const best=Math.max(m.p1,m.pN,m.p2);return { '1':m.p1===best,'N':m.pN===best,'2':m.p2===best };};
  const MatchCard=({match}:{match:Match})=><Pressable style={s.card} onPress={()=>setSelected(match)}>
