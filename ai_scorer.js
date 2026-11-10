@@ -51,7 +51,7 @@ async function pickScorerWithAI(players, homeStats, awayStats, expectedGoals, ho
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: options.model || process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      model: options.model || process.env.OPENAI_MODEL || 'gpt-6-astra',
       store: false,
       max_output_tokens: 220,
       temperature: 0.2,
