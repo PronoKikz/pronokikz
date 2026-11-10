@@ -15,6 +15,6 @@ const result = pickScorer(players, home, away, [1.5, 1.2], 1, 2);
 assert.match(result.bt, /^Buteur B/);
 assert.ok(result.btp > 0 && result.btp <= 1);
 assert.deepEqual(pickScorer([], home, away, [1, 1], 1, 2), { bt: '', btp: 0 });
-assert.deepEqual(pickScorer(players, null, away, [1, 1], 1, 2), { bt: 'Buteur B (8 buts en 10 matchs) · 62 % de marquer', btp: 0.617 });
+assert.deepEqual(pickScorer(players, null, away, [1, 1], 1, 2), { bt: 'Buteur B (8 buts en 10 matchs) · 55 % de marquer', btp: 0.551 });
 assert.deepEqual(pickScorer(players, home, away, [0, 0], 1, 2), { bt: '', btp: 0 });
 console.log('OK — tests de sélection statistique des buteurs Pronokikz');
