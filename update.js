@@ -238,7 +238,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:1};
    } else {
     const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
-    if(ev)m=blendMarketOdds(m,ev,.65);
+    if(ev)m=blendMarketOdds(m,ev,.85);
     m=applyExperts(m);
    }
    out.push(m);seen.add(id);
@@ -309,7 +309,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     m={...m,...oldN,d,h:m.h,r:score||oldN.r||null,lock:1};
    } else {
     const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
-    if(ev)m=blendMarketOdds(m,ev,.65);
+    if(ev)m=blendMarketOdds(m,ev,.85);
     m=applyExperts(m);
    }
    out.push(m);seen.add(id);
