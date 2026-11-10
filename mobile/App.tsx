@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 type ThemeName = 'dark' | 'light' | 'pink' | 'football' | 'system';
@@ -81,10 +82,29 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number): C
 
 export default function App() {
  const [themeName,setThemeName]=useState<ThemeName>('dark');
+ const [themeLoaded,setThemeLoaded]=useState(false);
+ const themeFile=(FileSystem.documentDirectory||'')+'pronokikz-theme.json';
+ useEffect(()=>{
+  let active=true;
+  (async()=>{
+   try {
+    const info=await FileSystem.getInfoAsync(themeFile);
+    if(info.exists){
+     const saved=JSON.parse(await FileSystem.readAsStringAsync(themeFile));
+     if(active&&['dark','light','pink','football','system'].includes(saved?.theme))setThemeName(saved.theme);
+    }
+   } catch(e) { /* En cas de fichier absent ou illisible, conserver le thème sombre par défaut. */ }
+   finally { if(active)setThemeLoaded(true); }
+  })();
+  return ()=>{active=false;};
+ },[]);
  const systemScheme=useColorScheme();
  const palette=useMemo(()=>themeName==='system'?(systemScheme==='light'?THEMES.light:THEMES.dark):THEMES[themeName],[themeName,systemScheme]);
  const s=useMemo(()=>createStyles(palette),[palette]);
- const changeTheme=(next:ThemeName)=>setThemeName(next);
+ const changeTheme=(next:ThemeName)=>{
+  setThemeName(next);
+  FileSystem.writeAsStringAsync(themeFile,JSON.stringify({theme:next})).catch(()=>{});
+ };
  const [tab,setTab]=useState('Accueil'),[matches,setMatches]=useState<Match[]>([]),[stats,setStats]=useState<Stats|null>(null),[selected,setSelected]=useState<Match|null>(null),[leagueFilter,setLeagueFilter]=useState('Toutes');
  const [leagueSeeds,setLeagueSeeds]=useState<Record<string,{safe:number;medium:number;high:number}>>({});
  const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState(''),[updatedAt,setUpdatedAt]=useState<string|null>(null),[apiOnline,setApiOnline]=useState(false);
