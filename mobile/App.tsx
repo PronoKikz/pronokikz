@@ -125,24 +125,35 @@ export default function App() {
   return Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0],'fr'));
  },[matches]);
  const competitionCombos=useMemo(()=>{
-  const groups:Record<string,Match[]>={};
+  const groups:Record<string,{league:string;round:string;matches:Match[]}>={};
   upcoming.forEach(m=>{
    const league=(m.lg||'Compétition non classée').trim();
-   (groups[league]||(groups[league]=[])).push(m);
+   // En UWCL, ne jamais mélanger plusieurs journées dans un même combiné.
+   let round='Tous les matchs à venir';
+   if(league.toLocaleLowerCase('fr').includes('champions féminine')){
+    const date=m.d||'';
+    if(['2026-11-10','2026-11-11','2026-11-12'].includes(date))round='Journée 4 · 10 au 12 novembre';
+    else if(['2026-11-18','2026-11-19'].includes(date))round='Journée 5 · 18 et 19 novembre';
+    else if(date==='2026-12-16')round='Journée 6 · 16 décembre';
+    else round='Autres dates';
+   }
+   const key=league+'::'+round;
+   if(!groups[key])groups[key]={league,round,matches:[]};
+   groups[key].matches.push(m);
   });
-  return Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0],'fr')).map(([league,leagueMatches])=>({
-   league,
-   safe:buildCombo(leagueMatches,2,4,(leagueSeeds[league]?.safe??0)+11),
-   medium:buildCombo(leagueMatches,6,8,(leagueSeeds[league]?.medium??0)+29),
-   high:buildCombo(leagueMatches,35,45,(leagueSeeds[league]?.high??0)+47)
+  return Object.entries(groups).sort((a,b)=>a[1].league.localeCompare(b[1].league,'fr')||a[1].matches[0].d!.localeCompare(b[1].matches[0].d!)).map(([groupId,g])=>({
+   groupId,league:g.league,round:g.round,
+   safe:buildCombo(g.matches,2,4,(leagueSeeds[groupId]?.safe??0)+11),
+   medium:buildCombo(g.matches,6,8,(leagueSeeds[groupId]?.medium??0)+29),
+   high:buildCombo(g.matches,35,45,(leagueSeeds[groupId]?.high??0)+47)
   }));
  },[upcoming,leagueSeeds]);
- const rerollLeagueCombo=(league:string,tier:'safe'|'medium'|'high')=>{
-  setLeagueSeeds(current=>({...current,[league]:{
-   safe:current[league]?.safe??0,
-   medium:current[league]?.medium??0,
-   high:current[league]?.high??0,
-   [tier]:(current[league]?.[tier]??0)+1
+ const rerollLeagueCombo=(groupId:string,tier:'safe'|'medium'|'high')=>{
+  setLeagueSeeds(current=>({...current,[groupId]:{
+   safe:current[groupId]?.safe??0,
+   medium:current[groupId]?.medium??0,
+   high:current[groupId]?.high??0,
+   [tier]:(current[groupId]?.[tier]??0)+1
   }}));
  };
  const ComboCard=({title,subtitle,combo,onReroll,accent}:{title:string;subtitle:string;combo:Combo|null;onReroll:()=>void;accent:string})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
@@ -171,7 +182,7 @@ export default function App() {
     {tab==='Accueil'&&<><View style={s.statsRow}><StatBox label="À venir" value={stats?.upcoming??upcoming.length}/><StatBox label="Terminés" value={stats?.finished??finished.length}/><StatBox label="Précision" value={stats?.accuracy==null?'—':stats.accuracy+'%'}/></View><View style={s.sectionHeader}><Text style={s.sectionTitle}>Prochains matchs</Text><Text style={s.counter}>{upcoming.length} MATCHS</Text></View>{loading?<ActivityIndicator color={palette.accent} size="large"/>:error?<Text style={s.error}>{error}</Text>:upcoming.length?upcoming.slice(0,4).map(m=><MatchCard key={String(m.id)} match={m}/>):<Text style={s.info}>Aucun match disponible pour le moment.</Text>}<Pressable style={s.button} onPress={()=>setTab('Matchs')}><Text style={s.buttonText}>Voir tous les matchs →</Text></Pressable></>}
     {tab==='Apparence'&&<><Text style={s.title}>Apparence</Text><Text style={s.heroDesc}>Choisis les couleurs de Pronokikz. Le changement s'applique immédiatement.</Text>{THEME_OPTIONS.map(option=><Pressable key={option.id} disabled={!themeLoaded} onPress={()=>changeTheme(option.id)} style={[s.card,s.themeOption,themeName===option.id&&s.themeOptionActive]}><View style={s.themeOptionLeft}><Text style={s.themeIcon}>{option.icon}</Text><View style={{flex:1}}><Text style={s.comboTitle}>{option.label}</Text><Text style={s.info}>{option.hint}</Text></View></View><Text style={s.themeCheck}>{themeName===option.id?'✓':'○'}</Text></Pressable>)}</>}
     {tab==='Matchs'&&<><Text style={s.title}>Tous les matchs</Text><Text style={s.heroDesc}>Rencontres à venir et analyses disponibles.</Text>{!loading&&!error&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filters} contentContainerStyle={s.filtersContent}>{leagueOptions.map(name=><Pressable key={name} onPress={()=>setLeagueFilter(name)} style={[s.filterChip,leagueFilter===name&&s.filterChipActive]}><Text style={[s.filterText,leagueFilter===name&&s.filterTextActive]}>{name}</Text></Pressable>)}</ScrollView>}{loading?<ActivityIndicator color={palette.accent}/>:error?<Text style={s.error}>{error}</Text>:visible.map(m=><MatchCard key={String(m.id)} match={m}/>)}{!loading&&!error&&!visible.length&&<Text style={s.info}>{leagueFilter==='Toutes'?'Aucun match à venir pour le moment.':'Aucune rencontre à venir pour cette compétition. Les prochains matchs apparaîtront automatiquement dès leur publication.'}</Text>}</>}
-    {tab==='Mon conseil'&&<><Text style={s.title}>Mon conseil</Text><Text style={s.heroDesc}>Les combinés sont séparés par compétition : aucune sélection ne mélange deux tournois différents.</Text>{competitionCombos.map(group=>{const accent=competitionAccent(group.league);return <View key={group.league} style={{marginTop:18}}><Text style={[s.sectionTitle,{color:accent}]}>{group.league}</Text><ComboCard title="SAFE · COTE 2 À 4" subtitle="Sélections de cette compétition uniquement." combo={group.safe} onReroll={()=>rerollLeagueCombo(group.league,'safe')}/><ComboCard title="OBJECTIF · COTE 6/7" subtitle="Sélections de cette compétition uniquement." combo={group.medium} onReroll={()=>rerollLeagueCombo(group.league,'medium')}/><ComboCard title="GROSSE COTE · 40" subtitle="Sélections de cette compétition uniquement." combo={group.high} onReroll={()=>rerollLeagueCombo(group.league,'high')}/></View>})}{!competitionCombos.length&&<Text style={s.info}>Aucun match à venir avec des probabilités exploitables.</Text>}<Text style={s.disclaimer}>Important : les cotes affichées sont théoriques, calculées comme l'inverse des probabilités du modèle. Ce ne sont pas les cotes d'un bookmaker. Aucun combiné n'est garanti. Chaque combiné reste limité à une seule compétition.</Text></>}
+    {tab==='Mon conseil'&&<><Text style={s.title}>Mon conseil</Text><Text style={s.heroDesc}>Les combinés sont séparés par compétition et par journée pour éviter de mélanger des rencontres trop éloignées.</Text>{competitionCombos.map(group=>{const accent=competitionAccent(group.league);return <View key={group.groupId} style={{marginTop:18}}><Text style={[s.sectionTitle,{color:accent}]}>{group.league}</Text><Text style={s.info}>{group.round}</Text><ComboCard title="SAFE · COTE 2 À 4" subtitle="Sélections de cette compétition et de cette journée uniquement." combo={group.safe} onReroll={()=>rerollLeagueCombo(group.groupId,'safe')}/><ComboCard title="OBJECTIF · COTE 6/7" subtitle="Sélections de cette compétition et de cette journée uniquement." combo={group.medium} onReroll={()=>rerollLeagueCombo(group.groupId,'medium')}/><ComboCard title="GROSSE COTE · 40" subtitle="Sélections de cette compétition et de cette journée uniquement." combo={group.high} onReroll={()=>rerollLeagueCombo(group.groupId,'high')}/></View>})}{!competitionCombos.length&&<Text style={s.info}>Aucun match à venir avec des probabilités exploitables.</Text>}<Text style={s.disclaimer}>Important : les cotes affichées sont théoriques, calculées comme l'inverse des probabilités du modèle. Ce ne sont pas les cotes d'un bookmaker. Aucun combiné n'est garanti. Chaque combiné reste limité à une seule compétition.</Text></>}
     {tab==='Résultats'&&<><Text style={s.title}>Résultats & historique</Text>{loading?<ActivityIndicator color={palette.accent}/>:error?<Text style={s.error}>{error}</Text>:finished.map(m=><MatchCard key={String(m.id)} match={m}/>)}{!finished.length&&<Text style={s.info}>Les résultats apparaîtront après la mise à jour des données.</Text>}</>}
     {tab==='Stats'&&<><Text style={s.title}>Statistiques Pronokikz</Text><View style={s.statsRow}><StatBox label="Matchs" value={stats?.total??matches.length}/><StatBox label="Évalués" value={stats?.evaluated??0}/><StatBox label="Bons pronos" value={stats?.correct??0}/></View><View style={s.card}><Text style={s.sectionTitle}>Précision 1N2 globale</Text><Text style={s.bigNumber}>{stats?.accuracy==null?'—':stats.accuracy+'%'}</Text><Text style={s.info}>Calculée sur les matchs terminés disposant d'un pronostic et d'un score final.</Text></View><Text style={s.sectionTitle}>Performance par compétition</Text>{leagueStats.length?leagueStats.map(([name,g])=><View key={name} style={s.card}><View style={s.footerRow}><Text style={s.comboTitle}>{name}</Text><Text style={s.comboProb}>{g.evaluated?Math.round(g.correct/g.evaluated*100)+'%':'—'}</Text></View><Text style={s.info}>{g.correct} bons pronostics sur {g.evaluated} matchs évalués</Text></View>):<Text style={s.info}>Les statistiques par compétition apparaîtront dès que les premiers matchs seront terminés et évalués.</Text>}</>}
    </>}
