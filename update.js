@@ -67,13 +67,8 @@ async function oddsFor(code){const res=await fetch(`https://api.the-odds-api.com
    if(mk.key==='h2h'){const g=n=>{const x=mk.outcomes.find(o=>o.name===n);return x?1/x.price:0},a=[g(e.home_team),g('Draw'),g(e.away_team)],s=a[0]+a[1]+a[2];if(s&&a[0]&&a[1]&&a[2]){for(let i=0;i<3;i++)acc.p[i]+=a[i]/s;acc.n++}}
    if(mk.key==='totals'){const ov=mk.outcomes.find(o=>o.name==='Over'&&o.point===2.5),un=mk.outcomes.find(o=>o.name==='Under'&&o.point===2.5);if(ov&&un){acc.o+=(1/ov.price)/(1/ov.price+1/un.price);acc.on++}}}));
   return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null}})}
-// Buteur : probabilité de marquer = taux de buts du joueur (buts / matchs joués) ajusté aux buts attendus de son équipe.
-// Limite : l'API gratuite ne donne ni minutes jouées, ni buts récents, ni blessures.
-function pickScorer(list,H,A,x,hid,aid){const cand=[];
- [[hid,H,x[0]],[aid,A,x[1]]].forEach(([id,T,xg])=>{const avg=r(T.gf,T.w)||1,ratio=Math.max(.6,Math.min(1.6,xg/avg));
-  list.filter(s=>s.team&&s.team.id===id&&s.playedMatches>=5&&s.goals>=3).forEach(s=>{const p=1-Math.exp(-(s.goals/s.playedMatches)*ratio);cand.push({n:s.player.name,g:s.goals,pm:s.playedMatches,p})})});
- cand.sort((a,b)=>b.p-a.p);const b=cand[0];
- return b&&b.p>=.25?{bt:b.n+' ('+b.g+' buts en '+b.pm+' matchs) · '+Math.round(b.p*100)+' % de marquer',btp:r3(b.p)}:{bt:'',btp:0}}
+// Buteur : algorithme statistique isolé et testé (ce n'est pas une IA conversationnelle).
+const { pickScorer } = require('./scorer');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
 let EXPL=[];try{EXPL=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';EXPERTS')||[]}catch(e){console.log('expert.js illisible : '+e.message)}
 function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
