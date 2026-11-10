@@ -61,12 +61,38 @@ function aggregate(hist){const z=()=>({n:0,h:0,b:0,no:0,o:0,br:0,ll:0}),G={tot:z
   const k=mx<.45?'moins de 45 %':mx<=.6?'45 à 60 %':'plus de 60 %';G.bk[k].n++;G.bk[k].h+=hit;
   e.p.forEach((p,i)=>{const c=cal.find(c=>p>=c.a&&p<c.b);if(c){c.n++;c.sp+=p;c.h+=i===o?1:0}})});
  G.cal=cal.filter(c=>c.n>0).map(c=>({a:c.a,b:c.b,n:c.n,p:r3(c.sp/c.n),f:r3(c.h/c.n)}));return G}
-async function oddsFor(code){const res=await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT[code]}/odds/?apiKey=${OD}&regions=eu&markets=h2h,totals&oddsFormat=decimal`);if(!res.ok)throw new Error('odds '+code+' -> '+res.status);
- return(await res.json()).map(e=>{const acc={p:[0,0,0],n:0,o:0,on:0};
+async function oddsFor(code){
+ const res=await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT[code]}/odds/?apiKey=${OD}&regions=eu&markets=h2h,totals&oddsFormat=decimal`);
+ if(!res.ok)throw new Error('odds '+code+' -> '+res.status);
+ return(await res.json()).map(e=>{
+  const acc={p:[0,0,0],n:0,o:0,on:0};
+  const best={h2h:{},totals:{}};
+  const save=(slot,outcome,price,bookmaker)=>{
+   if(!Number.isFinite(price)||price<=1)return;
+   if(!best[slot][outcome]||price>best[slot][outcome].price)best[slot][outcome]={price,bookmaker};
+  };
   (e.bookmakers||[]).forEach(b=>(b.markets||[]).forEach(mk=>{
-   if(mk.key==='h2h'){const g=n=>{const x=mk.outcomes.find(o=>o.name===n);return x?1/x.price:0},a=[g(e.home_team),g('Draw'),g(e.away_team)],s=a[0]+a[1]+a[2];if(s&&a[0]&&a[1]&&a[2]){for(let i=0;i<3;i++)acc.p[i]+=a[i]/s;acc.n++}}
-   if(mk.key==='totals'){const ov=mk.outcomes.find(o=>o.name==='Over'&&o.point===2.5),un=mk.outcomes.find(o=>o.name==='Under'&&o.point===2.5);if(ov&&un){acc.o+=(1/ov.price)/(1/ov.price+1/un.price);acc.on++}}}));
-  return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null}})}
+   if(mk.key==='h2h'){
+    const getOutcome=name=>mk.outcomes.find(o=>o.name===name);
+    const home=getOutcome(e.home_team),draw=getOutcome('Draw'),away=getOutcome(e.away_team);
+    const a=[home,draw,away].map(o=>o&&o.price?1/o.price:0),total=a[0]+a[1]+a[2];
+    if(total&&a.every(Boolean)){for(let i=0;i<3;i++)acc.p[i]+=a[i]/total;acc.n++}
+    save('h2h','home',home&&home.price,b.title);
+    save('h2h','draw',draw&&draw.price,b.title);
+    save('h2h','away',away&&away.price,b.title);
+   }
+   if(mk.key==='totals'){
+    const over=mk.outcomes.find(o=>o.name==='Over'&&o.point===2.5);
+    const under=mk.outcomes.find(o=>o.name==='Under'&&o.point===2.5);
+    if(over&&under){acc.o+=(1/over.price)/(1/over.price+1/under.price);acc.on++}
+    save('totals','over25',over&&over.price,b.title);
+    save('totals','under25',under&&under.price,b.title);
+   }
+  }));
+  return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null,
+   quotes:{h2h:best.h2h,totals:best.totals},oddsAt:new Date().toISOString()};
+ });
+}
 // Buteur : priorité à l'analyse OpenAI, avec repli statistique si la clé API est absente ou l'IA indisponible.
 const { pickScorer } = require('./scorer');
 const { buildHistoryEntry } = require('./history');
@@ -110,6 +136,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
       m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.5*raw.p1+.5*ev.p[0]),r3(.5*raw.pN+.5*ev.p[1]),r3(.5*raw.p2+.5*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
+   }
    // 2) buteur probable : IA OpenAI si OPENAI_API_KEY est configurée, sinon modèle statistique.
    if(m.btp===undefined||(process.env.OPENAI_API_KEY&&m.btSource!=='openai'&&!m.lock)){
     if(m.x){
