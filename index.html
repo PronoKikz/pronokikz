@@ -155,15 +155,24 @@ function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.f
  if(br!=null)c.appendChild(h('p','ia','Précision (score de Brier) : '+br.toFixed(2).replace('.',',')+' · le hasard donne 0,67, un bon modèle 0,58 à 0,62. Plus c’est bas, mieux c’est.'));
  $('stats').appendChild(c)}
 function conseils(open){
- const matches=open.slice().sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
+ const matches=open.filter(isOpen).slice().sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  if(!matches.length){A.appendChild(h('p','mu','Pas de match à venir pour proposer des conseils.'));return}
- const leagues=[...new Set(matches.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
- const head=h('div','league-title',null,h('div',null,'🏆 Tous les matchs du jour'),h('div','league-sub',null,matches.length+' match'+(matches.length>1?'s':'')+' · '+leagues.join(' · ')+' · combinés mélangés entre compétitions, uniquement pour cette journée'));
- A.appendChild(head);
- cyc('safe-daily',safeCands(matches),'reco','Combiné safe · toutes compétitions (cote ~2,5)','Sélections prudentes parmi les matchs de cette journée, toutes compétitions confondues. Vérifie la cote réelle chez ton bookmaker.');
- cyc('tip-daily',conseilCands(matches),'tip','Mon conseil · toutes compétitions (cote 2 à 5)','Meilleure probabilité possible parmi les matchs de cette journée, toutes compétitions confondues. Vérifie la cote réelle chez ton bookmaker.');
- cyc('fun-daily',diversify(beam(matches,.2,5,favLegs),6),'fun','Combiné fun · toutes compétitions (cote 5 et plus)','Sélections de cette journée, toutes compétitions confondues. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
- cyc('f40-daily',diversify(beam(matches,.025,8),5),'fun','Combiné cote 40+ · toutes compétitions','Combiné très risqué, construit uniquement avec les matchs de cette journée, toutes compétitions confondues.','Pas assez de matchs dans cette journée pour atteindre une cote de 40.');
+ // Les combinés de conseils utilisent des fenêtres successives de 3 jours.
+ // Les compétitions peuvent être mélangées dans une fenêtre, jamais au-delà.
+ const base=new Date(matches[0].d+'T12:00:00'),groups=new Map();
+ matches.forEach(m=>{const delta=Math.floor((new Date(m.d+'T12:00:00')-base)/86400000),start=new Date(base);start.setDate(start.getDate()+Math.floor(delta/3)*3);const key=start.toISOString().slice(0,10);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(m)});
+ [...groups.entries()].forEach(([start,list])=>{
+  const end=new Date(start+'T12:00:00');end.setDate(end.getDate()+2);
+  const fmt=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+  const leagues=[...new Set(list.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
+  const head=h('div','league-title',null,h('div',null,'🏆 Combinés du '+fmt(new Date(start+'T12:00:00'))+' au '+fmt(end)),h('div','league-sub',null,list.length+' match'+(list.length>1?'s':'')+' · '+leagues.join(' · ')+' · dates mélangées sur 3 jours maximum'));
+  A.appendChild(head);
+  const key='window-'+start+'-';
+  cyc(key+'safe',safeCands(list),'reco','Combiné safe · toutes compétitions (cote ~2,5)','Sélections prudentes parmi les matchs de cette période de 3 jours. Vérifie la cote réelle chez ton bookmaker.');
+  cyc(key+'tip',conseilCands(list),'tip','Mon conseil · toutes compétitions (cote 2 à 5)','Meilleure probabilité possible parmi les matchs de cette période de 3 jours. Vérifie la cote réelle chez ton bookmaker.');
+  cyc(key+'fun',diversify(beam(list,.2,5,favLegs),6),'fun','Combiné fun · toutes compétitions (cote 5 et plus)','Sélections de cette période de 3 jours, toutes compétitions confondues. À jouer seulement si la cote réelle du bookmaker convient.');
+  cyc(key+'f40',diversify(beam(list,.025,8),5),'fun','Combiné cote 40+ · toutes compétitions','Combiné très risqué, construit uniquement avec les matchs de cette période de 3 jours.','Pas assez de matchs dans cette période pour atteindre une cote de 40.');
+ });
 }
 function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(!S||!S.tot.n){A.appendChild(h('div','card',null,h('div','ttl','🧠 Apprentissage'),h('p','ia','Le modèle enregistre chaque prono avant le match, puis le compare au résultat réel. Rien à afficher tant qu’aucun match enregistré n’est terminé.')));return}
@@ -276,7 +285,7 @@ function render(){
  if(view=='p'){mesPronos();return}
  const dm=M.filter(m=>m.d===day),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
  if(!dm.length){A.appendChild(h('p','mu',day<TD?'Aucun prono enregistré ce jour-là (l’historique garde 14 jours).':'Aucun match à afficher pour ce jour.'));return}
- if(view=='c'){conseils(open);return}
+ if(view=='c'){conseils(M.filter(isOpen));return}
  const fn=dm.map(chk).filter(Boolean);
  if(fn.length){const w=f=>fn.filter(x=>x[f]).length,o=fn.filter(x=>x.o!=null);
   A.appendChild(h('div','card',null,h('div','ttl','📊 Bilan de ce jour ('+fn.length+' matchs terminés)'),h('div','stats',null,...[['Résultat',w('r')+'/'+fn.length],['BTTS',w('b')+'/'+fn.length],['+/-2,5',o.filter(x=>x.o).length+'/'+o.length]].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),h('p','ia','Les pronos affichés ci-dessous sont ceux enregistrés avant chaque match : ils ne sont jamais modifiés après.')))}
