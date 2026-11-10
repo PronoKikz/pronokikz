@@ -127,6 +127,73 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   const ft=f.score&&f.score.fullTime;
   out.push({...m,d:day(new Date(f.utcDate)),h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(new Date(f.utcDate)),
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null});seen.add(f.id)}
+ // Ligue des champions féminine UEFA : calendrier et résultats via le scoreboard ESPN.
+ // Les matchs sont ajoutés au flux principal avec un modèle statistique dédié à la compétition.
+ try {
+  const seasonStart=new Date().getMonth()>=6?new Date().getFullYear():new Date().getFullYear()-1;
+  const fromDate=String(seasonStart)+'0901',toDate=String(seasonStart+1)+'0630';
+  const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.wchampions/scoreboard?dates='+fromDate+'-'+toDate+'&limit=500';
+  const response=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!response.ok)throw new Error('ESPN UWCL '+response.status);
+  const json=await response.json();
+  const events=Array.isArray(json.events)?json.events:[];
+  const parsed=events.map(e=>{
+   const comp=(e.competitions||[])[0],teams=comp&&comp.competitors||[];
+   const home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
+   if(!home||!away||!home.team||!away.team||!e.date)return null;
+   const status=comp.status&&comp.status.type,done=!!(status&&status.completed);
+   const hs=home.score==null?null:Number(home.score),as=away.score==null?null:Number(away.score);
+   return {event:e,home,away,done,hs,as,date:new Date(e.date),
+    homeName:home.team.displayName||home.team.name||'Domicile',
+    awayName:away.team.displayName||away.team.name||'Extérieur'};
+  }).filter(e=>e&&Number.isFinite(e.date.getTime()));
+  const completed=parsed.filter(e=>e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as));
+  const form={};
+  const teamStat=name=>form[name]||(form[name]={gf:0,ga:0,n:0});
+  let goals=0,teamGames=0;
+  completed.forEach(e=>{
+   const h=teamStat(e.homeName),a=teamStat(e.awayName);
+   h.gf+=e.hs;h.ga+=e.as;h.n++;
+   a.gf+=e.as;a.ga+=e.hs;a.n++;
+   goals+=e.hs+e.as;teamGames+=2;
+  });
+  const avgGoals=teamGames?goals/teamGames:2.8;
+  const uwclOld=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('uwcl-')).map(m=>[String(m.id),m]));
+  for(const e of parsed){
+   const d=day(e.date);
+   if(d<day(off(-14))||d>day(off(45)))continue;
+   const id='uwcl-'+e.event.id,oldW=uwclOld[id];
+   const h=teamStat(e.homeName),a=teamStat(e.awayName);
+   // Lissage conservateur : les clubs ont peu de matchs dans cette compétition.
+   const base=Math.max(1.8,Math.min(3.8,avgGoals||2.8));
+   const smooth=(v,n)=>((v||0)+base*3)/(n+3);
+   const hgf=smooth(h.gf,h.n),hga=smooth(h.ga,h.n),agf=smooth(a.gf,a.n),aga=smooth(a.ga,a.n);
+   const lh=Math.max(.25,Math.min(3.8,1.48*(hgf/base)*(aga/base)));
+   const la=Math.max(.25,Math.min(3.8,1.12*(agf/base)*(hga/base)));
+   const px=model(lh,la);
+   const started=e.date.getTime()<=Date.now()||e.done;
+   const score=e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)?[e.hs,e.as]:null;
+   let m={
+    id,lg:"Ligue des champions féminine",home:e.homeName,away:e.awayName,
+    d,h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(e.date),
+    hc:e.home.team.logo||'',ac:e.away.team.logo||'',
+    p1:r3(px.p1),pN:r3(px.pN),p2:r3(px.p2),
+    btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,
+    x:[r3(lh),r3(la)],fm:[h.n,a.n],ng:[h.n,a.n],r:score,lock:started?1:0,
+    ia:'Pronostic statistique UWCL : résultats de la phase de ligue, buts marqués/encaissés et avantage du terrain. '+(Math.min(h.n,a.n)<3?'Échantillon limité : estimation indicative.':'Forme issue des matchs déjà joués dans la compétition.'),
+    pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
+   };
+   if(oldW&&(oldW.lock||oldW.pt)){
+    m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:oldW.lock||m.lock};
+   } else {
+    m=applyExperts(m);
+   }
+   out.push(m);seen.add(id);
+  }
+  console.log('Ligue des champions féminine :',parsed.length,'rencontres ESPN,',completed.length,'terminées');
+ } catch(e) {
+  console.log('Ligue des champions féminine indisponible pour cette mise à jour : '+e.message);
+ }
  // Ligue des nations UEFA : calendrier et scores via le scoreboard public ESPN.
  // Les rencontres sont normalisées dans le même format que les autres compétitions.
  try {
