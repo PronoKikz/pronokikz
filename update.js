@@ -95,7 +95,8 @@ async function oddsFor(code){
 }
 // Mélange les probabilités du modèle avec les probabilités implicites du marché.
  // Le marché p est déjà normalisé sans marge bookmaker dans oddsFor().
- function blendMarketOdds(m,ev,marketWeight=.85){
+ // Priorité au consensus bookmaker : 85 % marché, 15 % modèle statistique.
+function blendMarketOdds(m,ev,marketWeight=.85){
   if(!ev||!Array.isArray(ev.p)||ev.p.length!==3)return {...m,mkOdds:ev&&ev.quotes||m.mkOdds||null,mkOddsAt:ev&&ev.oddsAt||m.mkOddsAt};
   const base=m.raw||{p1:m.b0?.[0]??m.p1,pN:m.b0?.[1]??m.pN,p2:m.b0?.[2]??m.p2};
   const model=[base.p1,base.pN,base.p2],modelSum=model.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
