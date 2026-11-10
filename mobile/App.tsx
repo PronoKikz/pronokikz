@@ -20,65 +20,41 @@ const THEME_OPTIONS: {id:ThemeName;label:string;icon:string;hint:string}[] = [
 // Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.
 const DATA_URL = 'https://raw.githubusercontent.com/PronoKikz/pronokikz/main/data.json';
 
-type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; btts?: number; o25?: number; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
+type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; btts?: number; o25?: number; mkOdds?: {h2h?:{home?:{price:number;bookmaker:string};draw?:{price:number;bookmaker:string};away?:{price:number;bookmaker:string}};totals?:{over25?:{price:number;bookmaker:string};under25?:{price:number;bookmaker:string}}} | null; mkOddsAt?: string; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
 type Stats = { total: number; upcoming: number; finished: number; evaluated: number; correct: number; accuracy: number | null };
 const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 const prediction = (m: Match) => { if (m.r?.length === 2) return m.r[0] + ' - ' + m.r[1]; if (m.p1 == null || m.pN == null || m.p2 == null) return 'Analyse indisponible'; const best = Math.max(m.p1, m.pN, m.p2); return best === m.p1 ? '1 — domicile' : best === m.pN ? 'N — nul' : '2 — extérieur'; };
 const formatSelection = (value?: string) => value ? value.replace(/^(1N|N2|12)$/, x => x.split('').join('/')) : '';
-type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number };
+type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number; bookmaker: string };
 type Combo = { picks: ComboPick[]; odds: number; probability: number };
 const buildCombo = (matches: Match[], min: number, max: number, seed: number): Combo | null => {
  const byMatch: ComboPick[][] = [];
  matches.forEach(m => {
-  const markets: [string, number][] = [];
-  if (m.p1 != null) markets.push(['Victoire domicile (1)',m.p1]);
-  if (m.pN != null) markets.push(['Match nul (N)',m.pN]);
-  if (m.p2 != null) markets.push(['Victoire extérieur (2)',m.p2]);
-  if (m.p1 != null && m.pN != null) markets.push(['1 ou N',m.p1+m.pN]);
-  if (m.pN != null && m.p2 != null) markets.push(['N ou 2',m.pN+m.p2]);
-  if (m.p1 != null && m.p2 != null) markets.push(['1 ou 2 (pas de nul)',m.p1+m.p2]);
-  if (m.btts != null) {
-   markets.push(['Les deux équipes marquent : OUI',m.btts]);
-   markets.push(['Les deux équipes marquent : NON',1-m.btts]);
-  }
-  if (m.o25 != null) {
-   markets.push(['Plus de 2,5 buts',m.o25]);
-   markets.push(['Moins de 2,5 buts',1-m.o25]);
-  }
-  const picks = markets
-   .filter(([market,p]) => Number.isFinite(p) && p >= .35 && p <= .94)
-   .map(([market,probability]) => ({
-    id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h),
-    market,probability,odds:1/probability
-   }));
-  if (picks.length) byMatch.push(picks);
+  const markets: [string, number | undefined, {price:number;bookmaker:string}|undefined][] = [
+   ['Victoire domicile (1)',m.p1,m.mkOdds?.h2h?.home],['Match nul (N)',m.pN,m.mkOdds?.h2h?.draw],
+   ['Victoire extérieur (2)',m.p2,m.mkOdds?.h2h?.away],['Plus de 2,5 buts',m.o25,m.mkOdds?.totals?.over25],
+   ['Moins de 2,5 buts',m.o25==null?undefined:1-m.o25,m.mkOdds?.totals?.under25]
+  ];
+  const picks=markets.filter(([market,p,q])=>p!==undefined&&Number.isFinite(p)&&p>=.35&&p<=.94&&!!q&&Number.isFinite(q.price)&&q.price>1)
+   .map(([market,probability,q])=>({id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h),market,probability:probability!,odds:q!.price,bookmaker:q!.bookmaker}));
+  if(picks.length)byMatch.push(picks);
  });
- if (byMatch.length < 2) return null;
- let best: Combo | null = null;
- let state = ((seed+1) * 2654435761) >>> 0;
- const rand = () => { state = (Math.imul(state,1664525)+1013904223) >>> 0; return state/4294967296; };
- for (let attempt=0; attempt<2400; attempt++) {
-  const order = [...byMatch].map(group=>({group,key:rand()})).sort((a,b)=>a.key-b.key);
-  const picks: ComboPick[]=[]; let total=1;
-  for (const entry of order) {
-   const options=[...entry.group].sort((a,b)=>a.probability-b.probability);
-   // Favorise les marchés les plus probables, tout en variant les choix au reroll.
-   const top=options.slice(-Math.min(4,options.length));
-   const pick=top[Math.floor(rand()*top.length)];
-   if (total*pick.odds > max) continue;
-   picks.push(pick); total*=pick.odds;
-   if (total >= min && total <= max) {
-    const distance=Math.abs(total-(min+max)/2);
-    if (!best || total<best.odds) best={picks:[...picks],odds:total,probability:picks.reduce((product,pick)=>product*pick.probability,1)};
-    break;
-   }
+ if(byMatch.length<2)return null;
+ let best:Combo|null=null,state=((seed+1)*2654435761)>>>0;
+ const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};
+ for(let attempt=0;attempt<2400;attempt++){
+  const order=[...byMatch].map(group=>({group,key:rand()})).sort((a,b)=>a.key-b.key),picks:ComboPick[]=[];let total=1;
+  for(const entry of order){
+   const options=[...entry.group].sort((a,b)=>a.probability-b.probability),top=options.slice(-Math.min(4,options.length)),pick=top[Math.floor(rand()*top.length)];
+   if(total*pick.odds>max)continue;
+   picks.push(pick);total*=pick.odds;
+   if(total>=min&&total<=max){if(!best||Math.abs(total-(min+max)/2)<Math.abs(best.odds-(min+max)/2))best={picks:[...picks],odds:total,probability:picks.reduce((product,p)=>product*p.probability,1)};break}
   }
-  if (best && Math.abs(best.odds-(min+max)/2)<.05) break;
+  if(best&&Math.abs(best.odds-(min+max)/2)<.05)break;
  }
  return best;
 };
-
 
 export default function App() {
  const [themeName,setThemeName]=useState<ThemeName>('dark');
@@ -155,9 +131,9 @@ export default function App() {
  };
  const ComboCard=({title,subtitle,combo,onReroll,accent}:{title:string;subtitle:string;combo:Combo|null;onReroll:()=>void;accent:string})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
   <Text style={s.comboTitle}>{title}</Text><Text style={s.info}>{subtitle}</Text>
-  {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE ESTIMÉE</Text><Text style={s.comboOddsValue}> {combo.odds.toFixed(2).replace('.',',')}</Text><Text style={s.comboOddsLabel}>{combo.picks.length} sélections</Text></View><Text style={s.info}>Chance théorique du combiné : {pct(combo.probability)} · estimation indicative</Text>
-   {combo.picks.map((p,i)=><View key={p.id} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market} · {p.league}</Text></View><View style={{alignItems:'flex-end'}}><Text style={s.comboProb}>{Math.round(p.probability*100)} %</Text><Text style={s.comboMarket}>Cote estimée {p.odds.toFixed(2)}</Text></View></View>)}
-  </>:<Text style={s.info}>Pas assez de matchs ou de probabilités disponibles pour construire ce combiné.</Text>}
+  {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE BOOKMAKERS</Text><Text style={s.comboOddsValue}> {combo.odds.toFixed(2).replace('.',',')}</Text><Text style={s.comboOddsLabel}>{combo.picks.length} sélections</Text></View><Text style={s.info}>Meilleures offres réellement récupérées · probabilité Pronokikz : {pct(combo.probability)}</Text>
+   {combo.picks.map((p,i)=><View key={p.id} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market} · {p.league}</Text></View><View style={{alignItems:'flex-end'}}><Text style={s.comboProb}>{Math.round(p.probability*100)} %</Text><Text style={s.comboMarket}>{p.odds.toFixed(2)} · {p.bookmaker}</Text></View></View>)}
+  </>:<Text style={s.info}>Aucune cote bookmaker réelle disponible pour construire ce combiné. Les probabilités Pronokikz restent affichées séparément.</Text>}
   <Pressable style={s.rerollButton} onPress={onReroll}><Text style={s.rerollText}>↻ Relancer ce combiné</Text></Pressable>
  </View>;
 
