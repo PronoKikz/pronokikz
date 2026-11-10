@@ -69,6 +69,7 @@ async function oddsFor(code){const res=await fetch(`https://api.the-odds-api.com
   return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null}})}
 // Buteur : priorité à l'analyse OpenAI, avec repli statistique si la clé API est absente ou l'IA indisponible.
 const { pickScorer } = require('./scorer');
+const { buildHistoryEntry } = require('./history');
 const { pickScorerWithAI } = require('./ai_scorer');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
 let EXPL=[];try{EXPL=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';EXPERTS')||[]}catch(e){console.log('expert.js illisible : '+e.message)}
@@ -196,7 +197,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  }
  // enregistrement définitif : un prono terminé entre dans l'historique une seule fois et n'est JAMAIS modifié ensuite
  const ids=new Set(hist.map(e=>e.i));
- out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push({i:m.id,d:m.d,lg:m.lg,p:[m.p1,m.pN,m.p2],b:m.btts,o:m.o25==null?null:m.o25,x:m.x||null,q:m.q||null,r:m.r,t:m.pt||null});ids.add(m.id)}});
+ out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, m.goals));ids.add(m.id)}});
  const H2=hist.slice(-3000),keep=day(off(-14));
  const all=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
