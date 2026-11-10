@@ -1,0 +1,959 @@
+{
+  "generatedAt": "2026-11-10",
+  "periodRequested": {
+    "from": "2026-11-02",
+    "to": "2026-11-08"
+  },
+  "coverageNote": "Le snapshot Pronokikz disponible contient 43 matchs pronostiqués et terminés les 7 et 8 novembre uniquement. Il ne contient pas de prédictions enregistrées du 2 au 6 novembre. Ce rapport n'invente aucun pronostic rétroactif.",
+  "source": "data.json du dépôt officiel PronoKikz/pronokikz, branche main",
+  "sample": {
+    "matches": 43,
+    "correct": 25,
+    "accuracyPercent": 58.1,
+    "brier": 0.4962,
+    "logLoss": 0.8554,
+    "leagueStats": {
+      "Premier League": {
+        "matches": 9,
+        "correct": 5,
+        "accuracyPercent": 55.6
+      },
+      "Primera Division": {
+        "matches": 9,
+        "correct": 5,
+        "accuracyPercent": 55.6
+      },
+      "Serie A": {
+        "matches": 9,
+        "correct": 4,
+        "accuracyPercent": 44.4
+      },
+      "Bundesliga": {
+        "matches": 8,
+        "correct": 6,
+        "accuracyPercent": 75
+      },
+      "Ligue 1": {
+        "matches": 8,
+        "correct": 5,
+        "accuracyPercent": 62.5
+      }
+    }
+  },
+  "methodology": {
+    "selection": "Issue 1N2 = plus forte probabilité entre 1/N/2",
+    "brier": "Moyenne des sommes des erreurs quadratiques sur les 3 issues; plus bas est meilleur",
+    "logLoss": "Moyenne de -ln(probabilité de l'issue observée); plus bas est meilleur",
+    "limitations": [
+      "43 matchs seulement : échantillon faible",
+      "Les horodatages de création des pronostics sont absents du snapshot hist; les champs lock indiquent le verrouillage au coup d'envoi, mais ne remplacent pas une preuve horodatée",
+      "Pas de comparaison bookmaker dans ce rapport",
+      "Les résultats mesurent la sélection 1N2, pas la rentabilité d'un combiné"
+    ]
+  },
+  "matches": [
+    {
+      "date": "2026-11-07",
+      "league": "Premier League",
+      "home": "Leeds United",
+      "away": "Tottenham",
+      "probabilities": {
+        "home": 0.45,
+        "draw": 0.314,
+        "away": 0.236
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.456792,
+      "logLoss": 0.798508,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Primera Division",
+      "home": "Málaga",
+      "away": "Santander",
+      "probabilities": {
+        "home": 0.405,
+        "draw": 0.224,
+        "away": 0.37
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "2",
+      "correct": false,
+      "brier": 0.611101,
+      "logLoss": 0.994252,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Serie A",
+      "home": "Torino",
+      "away": "Lecce",
+      "probabilities": {
+        "home": 0.436,
+        "draw": 0.24,
+        "away": 0.323
+      },
+      "score": {
+        "home": 1,
+        "away": 1
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.872025,
+      "logLoss": 1.427116,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Serie A",
+      "home": "Cagliari",
+      "away": "Frosinone",
+      "probabilities": {
+        "home": 0.262,
+        "draw": 0.253,
+        "away": 0.485
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "1",
+      "correct": false,
+      "brier": 0.843878,
+      "logLoss": 1.339411,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Bundesliga",
+      "home": "Mainz",
+      "away": "Bayern",
+      "probabilities": {
+        "home": 0.114,
+        "draw": 0.145,
+        "away": 0.741
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.101102,
+      "logLoss": 0.299755,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Bundesliga",
+      "home": "SC Paderborn",
+      "away": "Frankfurt",
+      "probabilities": {
+        "home": 0.451,
+        "draw": 0.232,
+        "away": 0.317
+      },
+      "score": {
+        "home": 2,
+        "away": 2
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.893714,
+      "logLoss": 1.461018,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Bundesliga",
+      "home": "RB Leipzig",
+      "away": "Augsburg",
+      "probabilities": {
+        "home": 0.825,
+        "draw": 0.096,
+        "away": 0.08
+      },
+      "score": {
+        "home": 5,
+        "away": 2
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.046241,
+      "logLoss": 0.192372,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Bundesliga",
+      "home": "Dortmund",
+      "away": "Elversberg",
+      "probabilities": {
+        "home": 0.664,
+        "draw": 0.191,
+        "away": 0.144
+      },
+      "score": {
+        "home": 2,
+        "away": 1
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.170113,
+      "logLoss": 0.409473,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Premier League",
+      "home": "Arsenal",
+      "away": "Hull City",
+      "probabilities": {
+        "home": 0.679,
+        "draw": 0.214,
+        "away": 0.106
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.160073,
+      "logLoss": 0.387134,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Premier League",
+      "home": "Fulham",
+      "away": "Newcastle",
+      "probabilities": {
+        "home": 0.395,
+        "draw": 0.248,
+        "away": 0.357
+      },
+      "score": {
+        "home": 1,
+        "away": 1
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.848978,
+      "logLoss": 1.394327,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Primera Division",
+      "home": "Espanyol",
+      "away": "Deportivo",
+      "probabilities": {
+        "home": 0.336,
+        "draw": 0.281,
+        "away": 0.383
+      },
+      "score": {
+        "home": 0,
+        "away": 0
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.776546,
+      "logLoss": 1.269401,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Serie A",
+      "home": "Parma",
+      "away": "Bologna",
+      "probabilities": {
+        "home": 0.17,
+        "draw": 0.235,
+        "away": 0.596
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.247341,
+      "logLoss": 0.517515,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Premier League",
+      "home": "Nottingham",
+      "away": "Man City",
+      "probabilities": {
+        "home": 0.191,
+        "draw": 0.239,
+        "away": 0.571
+      },
+      "score": {
+        "home": 3,
+        "away": 1
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "1",
+      "correct": false,
+      "brier": 1.037643,
+      "logLoss": 1.655482,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Bundesliga",
+      "home": "Stuttgart",
+      "away": "Bremen",
+      "probabilities": {
+        "home": 0.441,
+        "draw": 0.228,
+        "away": 0.33
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.473365,
+      "logLoss": 0.81871,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Primera Division",
+      "home": "Osasuna",
+      "away": "Athletic",
+      "probabilities": {
+        "home": 0.294,
+        "draw": 0.296,
+        "away": 0.41
+      },
+      "score": {
+        "home": 1,
+        "away": 1
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.750152,
+      "logLoss": 1.217396,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Ligue 1",
+      "home": "Auxerre",
+      "away": "Paris FC",
+      "probabilities": {
+        "home": 0.214,
+        "draw": 0.244,
+        "away": 0.542
+      },
+      "score": {
+        "home": 0,
+        "away": 1
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.315096,
+      "logLoss": 0.612489,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Serie A",
+      "home": "Roma",
+      "away": "Sassuolo",
+      "probabilities": {
+        "home": 0.866,
+        "draw": 0.087,
+        "away": 0.047
+      },
+      "score": {
+        "home": 3,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.027734,
+      "logLoss": 0.14387,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Primera Division",
+      "home": "Valencia",
+      "away": "Real Madrid",
+      "probabilities": {
+        "home": 0.059,
+        "draw": 0.131,
+        "away": 0.81
+      },
+      "score": {
+        "home": 0,
+        "away": 3
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.056742,
+      "logLoss": 0.210721,
+      "locked": true
+    },
+    {
+      "date": "2026-11-07",
+      "league": "Ligue 1",
+      "home": "PSG",
+      "away": "Troyes",
+      "probabilities": {
+        "home": 0.721,
+        "draw": 0.188,
+        "away": 0.091
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.121466,
+      "logLoss": 0.327116,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Serie A",
+      "home": "Napoli",
+      "away": "Lazio",
+      "probabilities": {
+        "home": 0.178,
+        "draw": 0.201,
+        "away": 0.621
+      },
+      "score": {
+        "home": 1,
+        "away": 1
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 1.055726,
+      "logLoss": 1.60445,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Primera Division",
+      "home": "Elche",
+      "away": "Real Betis",
+      "probabilities": {
+        "home": 0.209,
+        "draw": 0.221,
+        "away": 0.57
+      },
+      "score": {
+        "home": 0,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.277422,
+      "logLoss": 0.562119,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Premier League",
+      "home": "Crystal Palace",
+      "away": "Liverpool",
+      "probabilities": {
+        "home": 0.135,
+        "draw": 0.18,
+        "away": 0.685
+      },
+      "score": {
+        "home": 1,
+        "away": 3
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.14985,
+      "logLoss": 0.378336,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Serie A",
+      "home": "Genoa",
+      "away": "Milan",
+      "probabilities": {
+        "home": 0.234,
+        "draw": 0.243,
+        "away": 0.522
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.342289,
+      "logLoss": 0.650088,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Premier League",
+      "home": "Ipswich Town",
+      "away": "Bournemouth",
+      "probabilities": {
+        "home": 0.369,
+        "draw": 0.232,
+        "away": 0.399
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.551186,
+      "logLoss": 0.918794,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Ligue 1",
+      "home": "Stade Rennais",
+      "away": "Lille",
+      "probabilities": {
+        "home": 0.412,
+        "draw": 0.245,
+        "away": 0.343
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "2",
+      "correct": false,
+      "brier": 0.661418,
+      "logLoss": 1.070025,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Premier League",
+      "home": "Sunderland",
+      "away": "Chelsea",
+      "probabilities": {
+        "home": 0.193,
+        "draw": 0.229,
+        "away": 0.578
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "1",
+      "correct": false,
+      "brier": 1.037774,
+      "logLoss": 1.645065,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Serie A",
+      "home": "Monza",
+      "away": "Atalanta",
+      "probabilities": {
+        "home": 0.448,
+        "draw": 0.209,
+        "away": 0.343
+      },
+      "score": {
+        "home": 0,
+        "away": 1
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "2",
+      "correct": false,
+      "brier": 0.676034,
+      "logLoss": 1.070025,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Premier League",
+      "home": "Brighton Hove",
+      "away": "Brentford",
+      "probabilities": {
+        "home": 0.693,
+        "draw": 0.175,
+        "away": 0.132
+      },
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.142298,
+      "logLoss": 0.366725,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Bundesliga",
+      "home": "1. FC Köln",
+      "away": "Leverkusen",
+      "probabilities": {
+        "home": 0.41,
+        "draw": 0.221,
+        "away": 0.369
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "2",
+      "correct": false,
+      "brier": 0.615102,
+      "logLoss": 0.996959,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Primera Division",
+      "home": "Real Sociedad",
+      "away": "Rayo Vallecano",
+      "probabilities": {
+        "home": 0.561,
+        "draw": 0.207,
+        "away": 0.232
+      },
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.289394,
+      "logLoss": 0.578034,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Ligue 1",
+      "home": "Angers SCO",
+      "away": "Nice",
+      "probabilities": {
+        "home": 0.278,
+        "draw": 0.248,
+        "away": 0.474
+      },
+      "score": {
+        "home": 0,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.415464,
+      "logLoss": 0.746548,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Ligue 1",
+      "home": "Brest",
+      "away": "Olympique Lyon",
+      "probabilities": {
+        "home": 0.37,
+        "draw": 0.259,
+        "away": 0.371
+      },
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "1",
+      "correct": false,
+      "brier": 0.601622,
+      "logLoss": 0.994252,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Ligue 1",
+      "home": "Le Havre",
+      "away": "Lorient",
+      "probabilities": {
+        "home": 0.136,
+        "draw": 0.241,
+        "away": 0.622
+      },
+      "score": {
+        "home": 0,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.219461,
+      "logLoss": 0.474815,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Ligue 1",
+      "home": "Le Mans",
+      "away": "Monaco",
+      "probabilities": {
+        "home": 0.27,
+        "draw": 0.241,
+        "away": 0.49
+      },
+      "score": {
+        "home": 1,
+        "away": 1
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.889081,
+      "logLoss": 1.422958,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Bundesliga",
+      "home": "Freiburg",
+      "away": "Union Berlin",
+      "probabilities": {
+        "home": 0.862,
+        "draw": 0.09,
+        "away": 0.048
+      },
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.029448,
+      "logLoss": 0.1485,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Premier League",
+      "home": "Man United",
+      "away": "Aston Villa",
+      "probabilities": {
+        "home": 0.314,
+        "draw": 0.25,
+        "away": 0.436
+      },
+      "score": {
+        "home": 4,
+        "away": 4
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.851192,
+      "logLoss": 1.386294,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Serie A",
+      "home": "Inter",
+      "away": "Como 1907",
+      "probabilities": {
+        "home": 0.479,
+        "draw": 0.21,
+        "away": 0.311
+      },
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.412262,
+      "logLoss": 0.736055,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Primera Division",
+      "home": "Celta",
+      "away": "Levante",
+      "probabilities": {
+        "home": 0.527,
+        "draw": 0.258,
+        "away": 0.216
+      },
+      "score": {
+        "home": 0,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.874949,
+      "logLoss": 1.354796,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Primera Division",
+      "home": "Villarreal",
+      "away": "Getafe",
+      "probabilities": {
+        "home": 0.58,
+        "draw": 0.24,
+        "away": 0.18
+      },
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.2664,
+      "logLoss": 0.544727,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Bundesliga",
+      "home": "Hoffenheim",
+      "away": "Schalke",
+      "probabilities": {
+        "home": 0.498,
+        "draw": 0.232,
+        "away": 0.27
+      },
+      "score": {
+        "home": 2,
+        "away": 1
+      },
+      "predictedOutcome": "1",
+      "actualOutcome": "1",
+      "correct": true,
+      "brier": 0.378728,
+      "logLoss": 0.697155,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Ligue 1",
+      "home": "RC Lens",
+      "away": "Marseille",
+      "probabilities": {
+        "home": 0.378,
+        "draw": 0.229,
+        "away": 0.392
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.564989,
+      "logLoss": 0.936493,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Serie A",
+      "home": "Fiorentina",
+      "away": "Juventus",
+      "probabilities": {
+        "home": 0.198,
+        "draw": 0.218,
+        "away": 0.584
+      },
+      "score": {
+        "home": 2,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "N",
+      "correct": false,
+      "brier": 0.991784,
+      "logLoss": 1.52326,
+      "locked": true
+    },
+    {
+      "date": "2026-11-08",
+      "league": "Primera Division",
+      "home": "Atleti",
+      "away": "Barça",
+      "probabilities": {
+        "home": 0.211,
+        "draw": 0.18,
+        "away": 0.608
+      },
+      "score": {
+        "home": 1,
+        "away": 2
+      },
+      "predictedOutcome": "2",
+      "actualOutcome": "2",
+      "correct": true,
+      "brier": 0.230585,
+      "logLoss": 0.49758,
+      "locked": true
+    }
+  ]
+}
