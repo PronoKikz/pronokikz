@@ -68,7 +68,7 @@ async function oddsFor(code){const res=await fetch(`https://api.the-odds-api.com
     ['home','draw','away'].forEach((key,i)=>{if(Number.isFinite(prices[i])&&prices[i]>1&&(!quotes.h2h[key]||prices[i]>quotes.h2h[key].price))quotes.h2h[key]={price:prices[i],bookmaker:b.title||b.key}})}
    if(mk.key==='totals'){const ov=mk.outcomes.find(o=>o.name==='Over'&&o.point===2.5),un=mk.outcomes.find(o=>o.name==='Under'&&o.point===2.5);if(ov&&un){acc.o+=(1/ov.price)/(1/ov.price+1/un.price);acc.on++}
     if(ov&&Number(ov.price)>1&&(!quotes.totals.over25||ov.price>quotes.totals.over25.price))quotes.totals.over25={price:Number(ov.price),bookmaker:b.title||b.key};
-    if(un&&Number(un.price)>1&&(!quotes.totals.under25||un.price>quotes.totals.under25.price))quotes.totals.under25={price:Number(un.price),bookmaker:b.title||b.key};}}));
+    if(un&&Number(un.price)>1&&(!quotes.totals.under25||un.price>quotes.totals.under25.price))quotes.totals.under25={price:Number(un.price),bookmaker:b.title||b.key};}));
   return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null,quotes,oddsAt:new Date().toISOString()}})}
 // Buteur : priorité à l'analyse OpenAI, avec repli statistique si la clé API est absente ou l'IA indisponible.
 const { pickScorer } = require('./scorer');
