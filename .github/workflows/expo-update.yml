@@ -10,6 +10,8 @@ on:
       - "mobile/**/*.ts"
       - "mobile/**/*.js"
       - "mobile/assets/**"
+      - "mobile/package.json"
+      - "mobile/package-lock.json"
 
 permissions:
   contents: read
