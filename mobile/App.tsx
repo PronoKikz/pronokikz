@@ -41,19 +41,27 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number): C
   if(picks.length)byMatch.push(picks);
  });
  if(byMatch.length<2)return null;
- let best:Combo|null=null,state=((seed+1)*2654435761)>>>0;
+ let state=((seed+1)*2654435761)>>>0;
  const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};
- for(let attempt=0;attempt<2400;attempt++){
+ const valid=new Map<string,Combo>();
+ for(let attempt=0;attempt<5000;attempt++){
   const order=[...byMatch].map(group=>({group,key:rand()})).sort((a,b)=>a.key-b.key),picks:ComboPick[]=[];let total=1;
   for(const entry of order){
    const options=[...entry.group].sort((a,b)=>a.probability-b.probability),top=options.slice(-Math.min(4,options.length)),pick=top[Math.floor(rand()*top.length)];
    if(total*pick.odds>max)continue;
    picks.push(pick);total*=pick.odds;
-   if(total>=min&&total<=max){if(!best||Math.abs(total-(min+max)/2)<Math.abs(best.odds-(min+max)/2))best={picks:[...picks],odds:total,probability:picks.reduce((product,p)=>product*p.probability,1)};break}
+   if(total>=min&&total<=max){
+    const signature=picks.map(p=>p.id+':'+p.market).sort().join('|');
+    if(!valid.has(signature))valid.set(signature,{picks:[...picks],odds:total,probability:picks.reduce((product,p)=>product*p.probability,1)});
+    break;
+   }
   }
-  if(best&&Math.abs(best.odds-(min+max)/2)<.05)break;
  }
- return best;
+ if(!valid.size)return null;
+ const target=(min+max)/2,ranked=[...valid.values()].sort((a,b)=>Math.abs(a.odds-target)-Math.abs(b.odds-target));
+ // Choisir parmi plusieurs combinaisons valides proches de la cote cible pour que chaque relance puisse réellement varier.
+ const pool=ranked.slice(0,Math.min(40,ranked.length));
+ return pool[Math.floor(rand()*pool.length)];
 };
 
 export default function App() {
