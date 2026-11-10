@@ -67,8 +67,9 @@ async function oddsFor(code){const res=await fetch(`https://api.the-odds-api.com
    if(mk.key==='h2h'){const g=n=>{const x=mk.outcomes.find(o=>o.name===n);return x?1/x.price:0},a=[g(e.home_team),g('Draw'),g(e.away_team)],s=a[0]+a[1]+a[2];if(s&&a[0]&&a[1]&&a[2]){for(let i=0;i<3;i++)acc.p[i]+=a[i]/s;acc.n++}}
    if(mk.key==='totals'){const ov=mk.outcomes.find(o=>o.name==='Over'&&o.point===2.5),un=mk.outcomes.find(o=>o.name==='Under'&&o.point===2.5);if(ov&&un){acc.o+=(1/ov.price)/(1/ov.price+1/un.price);acc.on++}}}));
   return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null}})}
-// Buteur : algorithme statistique isolé et testé (ce n'est pas une IA conversationnelle).
+// Buteur : priorité à l'analyse OpenAI, avec repli statistique si la clé API est absente ou l'IA indisponible.
 const { pickScorer } = require('./scorer');
+const { pickScorerWithAI } = require('./ai_scorer');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
 let EXPL=[];try{EXPL=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';EXPERTS')||[]}catch(e){console.log('expert.js illisible : '+e.message)}
 function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
@@ -107,10 +108,19 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     m={...m,mkAt:today};
     if(ev&&ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.5*raw.p1+.5*ev.p[0]),r3(.5*raw.pN+.5*ev.p[1]),r3(.5*raw.p2+.5*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
-   // 2) buteur probable
+   // 2) buteur probable : IA OpenAI si OPENAI_API_KEY est configurée, sinon modèle statistique.
    if(m.btp===undefined){
-    if(m.x){const T=await loadStats(c),H=T[f.homeTeam.id],A=T[f.awayTeam.id];m=H&&A?{...m,...pickScorer(await loadScorers(c),H,A,m.x,f.homeTeam.id,f.awayTeam.id)}:{...m,bt:'',btp:0}}
-    else m={...m,bt:'',btp:0}}
+    if(m.x){
+     const T=await loadStats(c),H=T[f.homeTeam.id],A=T[f.awayTeam.id],players=await loadScorers(c);
+     let aiPick=null;
+     if(H&&A&&process.env.OPENAI_API_KEY){
+      try{aiPick=await pickScorerWithAI(players,H,A,m.x,f.homeTeam.id,f.awayTeam.id,{home:m.home,away:m.away})}
+      catch(e){console.log('IA buteur indisponible pour '+m.home+' - '+m.away+' : '+e.message)}
+     }
+     const fallback=H&&A?pickScorer(players,H,A,m.x,f.homeTeam.id,f.awayTeam.id):{bt:'',btp:0};
+     m={...m,...(aiPick||fallback),btSource:aiPick?'openai':(fallback.bt?'statistical':'none')};
+    } else m={...m,bt:'',btp:0,btSource:'none'}
+   }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()}}
   const ft=f.score&&f.score.fullTime;
