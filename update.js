@@ -169,6 +169,9 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    const d=day(e.date);
    if(d<day(off(-14))||d>day(off(45)))continue;
    const id='uwcl-'+e.event.id,oldW=uwclOld[id];
+   const started=e.date.getTime()<=Date.now()||e.done;
+   // Ne jamais créer rétroactivement un pronostic pour un match déjà commencé.
+   if(started&&!oldW)continue;
    const h=teamStat(e.homeName),a=teamStat(e.awayName);
    // Lissage conservateur : les clubs ont peu de matchs dans cette compétition.
    const base=Math.max(1.8,Math.min(3.8,avgGoals||2.8));
@@ -177,7 +180,6 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    const lh=Math.max(.25,Math.min(3.8,1.48*(hgf/base)*(aga/base)));
    const la=Math.max(.25,Math.min(3.8,1.12*(agf/base)*(hga/base)));
    const px=model(lh,la);
-   const started=e.date.getTime()<=Date.now()||e.done;
    const score=e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)?[e.hs,e.as]:null;
    let m={
     id,lg:"Ligue des champions féminine",home:e.homeName,away:e.awayName,
@@ -270,7 +272,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  }
  // enregistrement définitif : un prono terminé entre dans l'historique une seule fois et n'est JAMAIS modifié ensuite
  const ids=new Set(hist.map(e=>e.i));
- out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, goalMap[m.id]));ids.add(m.id)}});
+ out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, null));ids.add(m.id)}});
  const H2=hist.slice(-3000),keep=day(off(-14));
  const all=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
