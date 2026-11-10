@@ -197,7 +197,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  }
  // enregistrement définitif : un prono terminé entre dans l'historique une seule fois et n'est JAMAIS modifié ensuite
  const ids=new Set(hist.map(e=>e.i));
- out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, m.goals));ids.add(m.id)}});
+ out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, goalMap[m.id]));ids.add(m.id)}});
  const H2=hist.slice(-3000),keep=day(off(-14));
  const all=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
