@@ -19,6 +19,8 @@ jobs:
       - run: node --check predictor.js
       - run: node --check scorer.js
       - run: node --check ai_scorer.js
+      - run: node --check history.js
+      - run: node tests/history.test.js
       - run: node tests/ai-scorer.test.js
       - run: node tests/scorer.test.js
       - run: node tests/predictor.test.js
