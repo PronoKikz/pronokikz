@@ -12,6 +12,7 @@ on:
       - 'expert.js'
       - 'scorer.js'
       - 'ai_scorer.js'
+      - 'history.js'
       - '.github/workflows/update.yml'
   schedule:
     - cron: '0 5 * * *'
