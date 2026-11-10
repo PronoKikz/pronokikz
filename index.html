@@ -74,7 +74,7 @@ const pick=m=>[m.fin,pf(m,m.fin)];
 function chk(m){if(!m.r)return null;const [a,b]=m.r,real=a>b?'1':a==b?'N':'2';
  return{s:a+' : '+b,r:m.fin.includes(real),b:(m.btts>=.5)==(a>0&&b>0),o:m.o25==null?null:(m.o25>=.5)==(a+b>2)}}
 function isOpen(m){if(m.r)return false;if(m.d>TD)return true;if(m.d<TD)return false;const [H,I]=m.h.split(':'),n=new Date();return n.getHours()*60+n.getMinutes()<+H*60+ +I}
-const mk=(m,l,p,kd,sd)=>({m:nm(m),k:nm(m),id:m.id,l,p,kd,sd});
+const mk=(m,l,p,kd,sd)=>({m:nm(m)+' ('+(m.lg||'Autres compétitions')+')',k:nm(m),id:m.id,l,p,kd,sd});
 function legsSafe(m){const f=dc(m).sort((a,b)=>b[1]-a[1]);if(m.fin.length==2)f.sort((a,b)=>(b[0]==m.fin)-(a[0]==m.fin)||b[1]-a[1]);
  return f.slice(0,2).map(([c,p])=>mk(m,(c=='1N'?m.home+' ou nul':c=='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',p,'x2',c))}
 function legsFun(m){return allLegs(m).sort((a,b)=>b.p-a.p).slice(0,2)}
@@ -155,26 +155,15 @@ function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.f
  if(br!=null)c.appendChild(h('p','ia','Précision (score de Brier) : '+br.toFixed(2).replace('.',',')+' · le hasard donne 0,67, un bon modèle 0,58 à 0,62. Plus c’est bas, mieux c’est.'));
  $('stats').appendChild(c)}
 function conseils(open){
- const leagues=[...new Set(open.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
- if(!leagues.length){A.appendChild(h('p','mu','Pas de match à venir pour proposer des conseils.'));return}
- leagues.forEach((lg,idx)=>{
-  const matches=open.filter(m=>(m.lg||'Autres compétitions')===lg).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
-  const head=h('div','league-title',null,h('div',null,'🏆 '+lg),h('div','league-sub',null,matches.length+' match'+(matches.length>1?'s':'')+' · combinés calculés uniquement dans cette compétition'));
-  const leagueName=nz(lg);
-  const leagueColor=leagueName.includes('feminin')||leagueName.includes('women')?'#6D28D9':leagueName.includes('championsleague')||leagueName.includes('liguedeschampions')?'#1D4ED8':leagueName.includes('nations')?'#047857':'#C2410C';
-  head.style.color=leagueColor;
-  A.appendChild(head);
-  if(matches.length<2){
-   A.appendChild(h('div','card',null,h('p','ia','Un seul match disponible : pas de combiné proposé pour éviter de mélanger cette compétition avec une autre.')));
-  }else{
-   const suffix='-'+nz(lg);
-   cyc('safe'+suffix,safeCands(matches),'reco','Combiné safe · '+lg+' (cote ~2,5)','Sélections prudentes de cette compétition uniquement. Vérifie la cote du bookmaker.');
-   cyc('tip'+suffix,conseilCands(matches),'tip','Mon conseil · '+lg+' (cote 2 à 5)','Meilleure probabilité possible parmi les matchs de cette compétition. Vérifie la cote réelle chez ton bookmaker.');
-   cyc('fun'+suffix,diversify(beam(matches,.2,5,favLegs),6),'fun','Combiné fun · '+lg+' (cote 5 et plus)','Sélections de cette compétition uniquement. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
-   cyc('f40'+suffix,diversify(beam(matches,.025,8),5),'fun','Combiné cote 40+ · '+lg,'Combiné très risqué, construit uniquement avec les matchs de cette compétition.','Pas assez de matchs dans cette compétition pour atteindre une cote de 40.');
-  }
-  if(idx<leagues.length-1)A.appendChild(h('div','league-end'));
- });
+ const matches=open.slice().sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
+ if(!matches.length){A.appendChild(h('p','mu','Pas de match à venir pour proposer des conseils.'));return}
+ const leagues=[...new Set(matches.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const head=h('div','league-title',null,h('div',null,'🏆 Tous les matchs du jour'),h('div','league-sub',null,matches.length+' match'+(matches.length>1?'s':'')+' · '+leagues.join(' · ')+' · combinés mélangés entre compétitions, uniquement pour cette journée'));
+ A.appendChild(head);
+ cyc('safe-daily',safeCands(matches),'reco','Combiné safe · toutes compétitions (cote ~2,5)','Sélections prudentes parmi les matchs de cette journée, toutes compétitions confondues. Vérifie la cote réelle chez ton bookmaker.');
+ cyc('tip-daily',conseilCands(matches),'tip','Mon conseil · toutes compétitions (cote 2 à 5)','Meilleure probabilité possible parmi les matchs de cette journée, toutes compétitions confondues. Vérifie la cote réelle chez ton bookmaker.');
+ cyc('fun-daily',diversify(beam(matches,.2,5,favLegs),6),'fun','Combiné fun · toutes compétitions (cote 5 et plus)','Sélections de cette journée, toutes compétitions confondues. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
+ cyc('f40-daily',diversify(beam(matches,.025,8),5),'fun','Combiné cote 40+ · toutes compétitions','Combiné très risqué, construit uniquement avec les matchs de cette journée, toutes compétitions confondues.','Pas assez de matchs dans cette journée pour atteindre une cote de 40.');
 }
 function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(!S||!S.tot.n){A.appendChild(h('div','card',null,h('div','ttl','🧠 Apprentissage'),h('p','ia','Le modèle enregistre chaque prono avant le match, puis le compare au résultat réel. Rien à afficher tant qu’aucun match enregistré n’est terminé.')));return}
@@ -294,7 +283,7 @@ function render(){
  const fb=(t,on,f)=>{const b=h('button',on?'on':'',t);b.onclick=f;$('flt').appendChild(b)};
  fb('Tous',!F.lg,()=>{F.lg='';render()});lgs.forEach(l=>fb(l,F.lg===l,()=>{F.lg=l;render()}));fb('⭐ Confiance élevée',F.hi,()=>{F.hi=!F.hi;render()});
  const shown=dm.filter(m=>(!F.lg||m.lg===F.lg)&&(!F.hi||pick(m)[1]>=.6));
- [...new Set(shown.map(m=>m.lg))].forEach(l=>{A.appendChild(h('h2',null,l));shown.filter(m=>m.lg===l).forEach(m=>A.appendChild(card(m)))});
+ [...new Set(shown.map(m=>m.lg))].forEach(l=>{const title=h('h2',null,l);if(/fémin|feminin|women/i.test(l)){title.style.color='#f472b6';title.style.borderBottom='2px solid #f472b6';title.style.paddingBottom='5px'}A.appendChild(title);shown.filter(m=>m.lg===l).forEach(m=>A.appendChild(card(m)))});
  if(!shown.length)A.appendChild(h('p','mu','Aucun match avec ce filtre.'));
  A.appendChild(crit())}
 
