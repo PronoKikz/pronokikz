@@ -132,11 +132,17 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  try {
   const seasonStart=new Date().getMonth()>=6?new Date().getFullYear():new Date().getFullYear()-1;
   const fromDate=String(seasonStart)+'0901',toDate=String(seasonStart+1)+'0630';
-  const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.wchampions/scoreboard?dates='+fromDate+'-'+toDate+'&limit=500';
-  const response=await fetch(url,{headers:{'Accept':'application/json'}});
-  if(!response.ok)throw new Error('ESPN UWCL '+response.status);
-  const json=await response.json();
-  const events=Array.isArray(json.events)?json.events:[];
+  // ESPN n'accepte pas toujours les plages de dates pour cette compétition : une requête par journée.
+  const dates=['20260922','20260923','20260930','20261001','20261028','20261029',
+   '20261110','20261111','20261112','20261118','20261119','20261216'];
+  const packs=await Promise.all(dates.map(async date=>{
+   const url='https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.wchampions/scoreboard?dates='+date;
+   const response=await fetch(url,{headers:{'Accept':'application/json'}});
+   if(!response.ok){console.log('ESPN UWCL '+response.status+' sur '+date);return []}
+   const json=await response.json();
+   return Array.isArray(json.events)?json.events:[];
+  }));
+  const events=[...new Map(packs.flat().map(e=>[String(e.id),e])).values()];
   const parsed=events.map(e=>{
    const comp=(e.competitions||[])[0],teams=comp&&comp.competitors||[];
    const home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
