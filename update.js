@@ -93,6 +93,19 @@ async function oddsFor(code){
    quotes:{h2h:best.h2h,totals:best.totals},oddsAt:new Date().toISOString()};
  });
 }
+// Mélange les probabilités du modèle avec les probabilités implicites du marché.
+ // Le marché p est déjà normalisé sans marge bookmaker dans oddsFor().
+ function blendMarketOdds(m,ev,marketWeight=.65){
+  if(!ev||!Array.isArray(ev.p)||ev.p.length!==3)return {...m,mkOdds:ev&&ev.quotes||m.mkOdds||null,mkOddsAt:ev&&ev.oddsAt||m.mkOddsAt};
+  const base=m.raw||{p1:m.b0?.[0]??m.p1,pN:m.b0?.[1]??m.pN,p2:m.b0?.[2]??m.p2};
+  const model=[base.p1,base.pN,base.p2],modelSum=model.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
+  if(!model.every(Number.isFinite)||modelSum<=0)return {...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
+  const market=ev.p,marketSum=market.reduce((a,b)=>a+b,0);
+  if(!market.every(Number.isFinite)||marketSum<=0)return {...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
+  const mixed=model.map((p,i)=>r3((1-marketWeight)*(p/modelSum)+marketWeight*(market[i]/marketSum)));
+  const total=mixed.reduce((a,b)=>a+b,0),p=mixed.map(x=>r3(x/total));
+  return {...m,raw:{p1:r3(model[0]/modelSum),pN:r3(model[1]/modelSum),p2:r3(model[2]/modelSum)},mk:1,mkp:market.map(x=>r3(x/marketSum)),mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString(),b0:p,p1:p[0],pN:p[1],p2:p[2]};
+ }
 // Buteur : priorité à l'analyse OpenAI, avec repli statistique si la clé API est absente ou l'IA indisponible.
 const { pickScorer } = require('./scorer');
 const { buildHistoryEntry } = require('./history');
@@ -135,7 +148,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     m={...m,mkAt:today};
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
-      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.5*raw.p1+.5*ev.p[0]),r3(.5*raw.pN+.5*ev.p[1]),r3(.5*raw.p2+.5*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
+      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.35*raw.p1+.65*ev.p[0]),r3(.35*raw.pN+.65*ev.p[1]),r3(.35*raw.p2+.65*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
    }
    // 2) buteur probable : IA OpenAI si OPENAI_API_KEY est configurée, sinon modèle statistique.
    if(m.btp===undefined||(process.env.OPENAI_API_KEY&&m.btSource!=='openai'&&!m.lock)){
@@ -220,13 +233,13 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     ia:'Pronostic statistique UWCL : résultats de la phase de ligue, buts marqués/encaissés et avantage du terrain. '+(Math.min(h.n,a.n)<3?'Échantillon limité : estimation indicative.':'Forme issue des matchs déjà joués dans la compétition.'),
     pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
    };
-   if(oldW&&(oldW.lock||oldW.pt)){
-    m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:oldW.lock||m.lock};
+   if(started&&oldW){
+    m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:1};
    } else {
+    const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
+    if(ev)m=blendMarketOdds(m,ev,.65);
     m=applyExperts(m);
    }
-   const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
-   if(ev)m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
    out.push(m);seen.add(id);
   }
   console.log('Ligue des champions féminine :',parsed.length,'rencontres ESPN,',completed.length,'terminées');
@@ -291,13 +304,13 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     ia:'Pronostic statistique ESPN : résultats récents de la Ligue des nations et modèle de buts attendus. '+(Math.min(h.n,a.n)<3?'Historique limité : estimation indicative.':'Forme basée sur les matchs déjà joués dans la compétition.'),
     pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
    };
-   if(oldN&&(oldN.lock||oldN.pt)){
-    m={...m,...oldN,d,h:m.h,r:score||oldN.r||null,lock:oldN.lock||m.lock};
+   if(started&&oldN){
+    m={...m,...oldN,d,h:m.h,r:score||oldN.r||null,lock:1};
    } else {
+    const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
+    if(ev)m=blendMarketOdds(m,ev,.65);
     m=applyExperts(m);
    }
-   const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
-   if(ev)m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
    out.push(m);seen.add(id);
   }
   console.log('Ligue des nations UEFA :',parsed.length,'rencontres ESPN,',completed.length,'terminées');
