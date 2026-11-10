@@ -67,7 +67,7 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number): C
 
 export default function App() {
  const [tab,setTab]=useState('Accueil'),[matches,setMatches]=useState<Match[]>([]),[stats,setStats]=useState<Stats|null>(null),[selected,setSelected]=useState<Match|null>(null),[leagueFilter,setLeagueFilter]=useState('Toutes');
- const [safeSeed,setSafeSeed]=useState(0),[mediumSeed,setMediumSeed]=useState(0),[highSeed,setHighSeed]=useState(0);
+ const [leagueSeeds,setLeagueSeeds]=useState<Record<string,{safe:number;medium:number;high:number}>>({});
  const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState(''),[updatedAt,setUpdatedAt]=useState<string|null>(null),[apiOnline,setApiOnline]=useState(false);
  const load=useCallback(async()=>{try{setError('');const response=await fetch(DATA_URL+'?t='+Date.now());if(!response.ok)throw new Error('Données indisponibles ('+response.status+').');const data=await response.json();const list=Array.isArray(data.matches)?data.matches:[];setMatches(list);setUpdatedAt(data.updatedAt||null);const finished=list.filter((m:Match)=>Array.isArray(m.r)&&m.r.length===2);const upcoming=list.filter((m:Match)=>!Array.isArray(m.r)||m.r.length!==2);let correct=0,evaluated=0;for(const m of finished){if(m.p1==null||m.pN==null||m.p2==null)continue;const predicted=m.p1>=m.pN&&m.p1>=m.p2?'1':m.pN>=m.p1&&m.pN>=m.p2?'N':'2';const actual=m.r![0]>m.r![1]?'1':m.r![0]===m.r![1]?'N':'2';evaluated++;if(predicted===actual)correct++;}setStats({total:list.length,upcoming:upcoming.length,finished:finished.length,evaluated,correct,accuracy:evaluated?Math.round(correct/evaluated*100):null});setApiOnline(true);}catch(e:any){setApiOnline(false);setError(e?.message||'Impossible de charger les données Pronokikz.');}finally{setLoading(false);setRefreshing(false);}},[]);
  useEffect(()=>{load();},[load]);
@@ -85,11 +85,27 @@ export default function App() {
   });
   return Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0],'fr'));
  },[matches]);
- const combos=useMemo(()=>({
-  safe:buildCombo(upcoming,2,4,safeSeed+11),
-  medium:buildCombo(upcoming,6,8,mediumSeed+29),
-  high:buildCombo(upcoming,35,45,highSeed+47)
- }),[upcoming,safeSeed,mediumSeed,highSeed]);
+ const competitionCombos=useMemo(()=>{
+  const groups:Record<string,Match[]>={};
+  upcoming.forEach(m=>{
+   const league=(m.lg||'Compétition non classée').trim();
+   (groups[league]||(groups[league]=[])).push(m);
+  });
+  return Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0],'fr')).map(([league,leagueMatches])=>({
+   league,
+   safe:buildCombo(leagueMatches,2,4,(leagueSeeds[league]?.safe??0)+11),
+   medium:buildCombo(leagueMatches,6,8,(leagueSeeds[league]?.medium??0)+29),
+   high:buildCombo(leagueMatches,35,45,(leagueSeeds[league]?.high??0)+47)
+  }));
+ },[upcoming,leagueSeeds]);
+ const rerollLeagueCombo=(league:string,tier:'safe'|'medium'|'high')=>{
+  setLeagueSeeds(current=>({...current,[league]:{
+   safe:current[league]?.safe??0,
+   medium:current[league]?.medium??0,
+   high:current[league]?.high??0,
+   [tier]:(current[league]?.[tier]??0)+1
+  }}));
+ };
  const ComboCard=({title,subtitle,combo,onReroll}:{title:string;subtitle:string;combo:Combo|null;onReroll:()=>void})=><View style={s.card}>
   <Text style={s.comboTitle}>{title}</Text><Text style={s.info}>{subtitle}</Text>
   {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE ESTIMÉE</Text><Text style={s.comboOddsValue}> {combo.odds.toFixed(2).replace('.',',')}</Text><Text style={s.comboOddsLabel}>{combo.picks.length} sélections</Text></View>
