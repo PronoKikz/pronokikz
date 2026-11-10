@@ -14,6 +14,7 @@ h1{font-size:24px;margin:2px 0 4px}h1 span{color:var(--gold)}.mu{color:var(--mu)
 .rf{width:100%;padding:12px;border:0;border-radius:14px;background:var(--gold);color:#111;font-size:16px;font-weight:800;margin:10px 0}
 h2{font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 2px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:14px;margin:10px 0}
+.league-title{margin:24px 0 8px;padding:12px 14px;border:1px solid var(--gold);border-left:5px solid var(--gold);border-radius:12px;background:linear-gradient(90deg,#33290a 0%,#171b21 75%);color:#ffd45a;font-size:15px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}.league-sub{font-size:12px;color:var(--mu);font-weight:600;text-transform:none;letter-spacing:0;margin-top:3px}.league-end{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:22px 0}
 .tip{border:1px solid var(--gold)}
 .fun{border:1px solid var(--bl)}.c2{border:1px solid var(--gold)}
 .reco{border:1px solid var(--g)}.reco .ttl{color:var(--g)}
@@ -154,12 +155,24 @@ function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.f
  if(br!=null)c.appendChild(h('p','ia','Précision (score de Brier) : '+br.toFixed(2).replace('.',',')+' · le hasard donne 0,67, un bon modèle 0,58 à 0,62. Plus c’est bas, mieux c’est.'));
  $('stats').appendChild(c)}
 function conseils(open){
- if(open.length<2){A.appendChild(h('p','mu','Pas assez de matchs à venir pour proposer des combinés.'));return}
- if(typeof COMBO!=='undefined'&&COMBO&&COMBO.legs&&COMBO.legs.length&&day==TD)box('reco','Combiné safe',COMBO.legs,COMBO.note||'');
- else cyc('safe',safeCands(open),'reco','Combiné safe (cote ~2,5)','Sélections prudentes (double chance), cote visée autour de 2,5. Vérifie la cote du bookmaker.');
- cyc('tip',conseilCands(open),'tip','Conseil du jour (cote 2 à 5)','Mon conseil : une cote entre 2 et 5 avec la meilleure probabilité possible. À jouer si la cote du bookmaker est au moins égale à la cote équitable.');
- cyc('fun',diversify(beam(open,.2,5,favLegs),6),'fun','Combiné fun (cote 5 et plus)','Composé de mes pronos favoris du jour. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
- cyc('f40',diversify(beam(open,.025,8),5),'fun','Combiné fun (cote 40 et plus)','Environ 1 chance sur 40 de passer, voire moins : à tout petit prix seulement.','Pas assez de matchs à venir pour atteindre une cote de 40.')}
+ const leagues=[...new Set(open.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
+ if(!leagues.length){A.appendChild(h('p','mu','Pas de match à venir pour proposer des conseils.'));return}
+ leagues.forEach((lg,idx)=>{
+  const matches=open.filter(m=>(m.lg||'Autres compétitions')===lg).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
+  const head=h('div','league-title',null,h('div',null,'🏆 '+lg),h('div','league-sub',null,matches.length+' match'+(matches.length>1?'s':'')+' · combinés calculés uniquement dans cette compétition'));
+  A.appendChild(head);
+  if(matches.length<2){
+   A.appendChild(h('div','card',null,h('p','ia','Un seul match disponible : pas de combiné proposé pour éviter de mélanger cette compétition avec une autre.')));
+  }else{
+   const suffix='-'+nz(lg);
+   cyc('safe'+suffix,safeCands(matches),'reco','Combiné safe · '+lg+' (cote ~2,5)','Sélections prudentes de cette compétition uniquement. Vérifie la cote du bookmaker.');
+   cyc('tip'+suffix,conseilCands(matches),'tip','Mon conseil · '+lg+' (cote 2 à 5)','Meilleure probabilité possible parmi les matchs de cette compétition. Vérifie la cote réelle chez ton bookmaker.');
+   cyc('fun'+suffix,diversify(beam(matches,.2,5,favLegs),6),'fun','Combiné fun · '+lg+' (cote 5 et plus)','Sélections de cette compétition uniquement. À jouer seulement si la cote du bookmaker est au moins de 5,00.');
+   cyc('f40'+suffix,diversify(beam(matches,.025,8),5),'fun','Combiné cote 40+ · '+lg,'Combiné très risqué, construit uniquement avec les matchs de cette compétition.','Pas assez de matchs dans cette compétition pour atteindre une cote de 40.');
+  }
+  if(idx<leagues.length-1)A.appendChild(h('div','league-end'));
+ });
+}
 function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(!S||!S.tot.n){A.appendChild(h('div','card',null,h('div','ttl','🧠 Apprentissage'),h('p','ia','Le modèle enregistre chaque prono avant le match, puis le compare au résultat réel. Rien à afficher tant qu’aucun match enregistré n’est terminé.')));return}
  const q=(a,b)=>b?Math.round(100*a/b)+'%':'–',t=S.tot;
