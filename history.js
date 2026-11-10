@@ -2,13 +2,13 @@
 
 function normalizeName(value) {
   return String(value || '').toLowerCase()
-    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '');
 }
 
 function predictedScorerName(label) {
   if (typeof label !== 'string' || !label.trim()) return null;
-  return label.split(/\\s(?:\\(|·)/)[0].trim() || null;
+  return label.split(/\s(?:\(|·)/)[0].trim() || null;
 }
 
 function actualScorerNames(goals) {
