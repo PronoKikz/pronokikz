@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
 
 type ThemeName = 'dark' | 'light' | 'pink' | 'football' | 'system';
 type ThemePalette = { bg:string; card:string; muted:string; accent:string; text:string; border:string; surface:string; nav:string; activeSurface:string; buttonText:string; statusBar:'light-content'|'dark-content' };
@@ -17,7 +16,6 @@ const THEME_OPTIONS: {id:ThemeName;label:string;icon:string;hint:string}[] = [
  {id:'football',label:'Football',icon:'⚽',hint:'Vert pelouse et ambiance stade.'},
  {id:'system',label:'Automatique',icon:'📱',hint:'Suit le thème de ton téléphone.'}
 ];
-const THEME_FILE = FileSystem.documentDirectory ? FileSystem.documentDirectory + 'pronokikz-theme.json' : null;
 // Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.
 const DATA_URL = 'https://raw.githubusercontent.com/PronoKikz/pronokikz/main/data.json';
 
@@ -86,17 +84,7 @@ export default function App() {
  const systemScheme=useColorScheme();
  const palette=useMemo(()=>themeName==='system'?(systemScheme==='light'?THEMES.light:THEMES.dark):THEMES[themeName],[themeName,systemScheme]);
  const s=useMemo(()=>createStyles(palette),[palette]);
- const changeTheme=(next:ThemeName)=>{
-  setThemeName(next);
-  if(THEME_FILE)FileSystem.writeAsStringAsync(THEME_FILE,JSON.stringify(next)).catch(()=>{});
- };
- useEffect(()=>{
-  if(!THEME_FILE)return;
-  FileSystem.readAsStringAsync(THEME_FILE).then(raw=>{
-   const saved=JSON.parse(raw);
-   if(['dark','light','pink','football','system'].includes(saved))setThemeName(saved);
-  }).catch(()=>{});
- },[]);
+ const changeTheme=(next:ThemeName)=>setThemeName(next);
  const [tab,setTab]=useState('Accueil'),[matches,setMatches]=useState<Match[]>([]),[stats,setStats]=useState<Stats|null>(null),[selected,setSelected]=useState<Match|null>(null),[leagueFilter,setLeagueFilter]=useState('Toutes');
  const [leagueSeeds,setLeagueSeeds]=useState<Record<string,{safe:number;medium:number;high:number}>>({});
  const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState(''),[updatedAt,setUpdatedAt]=useState<string|null>(null),[apiOnline,setApiOnline]=useState(false);
