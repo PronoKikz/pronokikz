@@ -14,7 +14,7 @@ h1{font-size:24px;margin:2px 0 4px}h1 span{color:var(--gold)}.mu{color:var(--mu)
 .rf{width:100%;padding:12px;border:0;border-radius:14px;background:var(--gold);color:#111;font-size:16px;font-weight:800;margin:10px 0}
 h2{font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 2px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:14px;margin:10px 0}
-.league-title{margin:26px 0 10px;padding:14px 16px;border:2px solid #ffe16b;border-left:8px solid #fff3b0;border-radius:13px;background:linear-gradient(100deg,#ffd83d 0%,#ffad22 58%,#f28b18 100%);color:#171717;font-size:16px;font-weight:950;letter-spacing:.045em;text-transform:uppercase;box-shadow:0 4px 14px #0005}.league-title .league-sub{color:#493300;font-size:12px;font-weight:800;letter-spacing:0;text-transform:none}.league-sub{font-size:12px;color:var(--mu);font-weight:600;text-transform:none;letter-spacing:0;margin-top:3px}.league-end{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:22px 0}
+.league-title{margin:26px 0 10px;padding:14px 16px;border:2px solid #ffe16b;border-left:8px solid #fff3b0;border-radius:13px;background:linear-gradient(100deg,#ffd83d 0%,#ffad22 58%,#f28b18 100%);font-size:16px;font-weight:950;letter-spacing:.045em;text-transform:uppercase;box-shadow:0 4px 14px #0005}.league-title .league-sub{color:#493300;font-size:12px;font-weight:800;letter-spacing:0;text-transform:none}.league-sub{font-size:12px;color:var(--mu);font-weight:600;text-transform:none;letter-spacing:0;margin-top:3px}.league-end{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:22px 0}
 .tip{border:1px solid var(--gold)}
 .fun{border:1px solid var(--bl)}.c2{border:1px solid var(--gold)}
 .reco{border:1px solid var(--g)}.reco .ttl{color:var(--g)}
@@ -160,6 +160,9 @@ function conseils(open){
  leagues.forEach((lg,idx)=>{
   const matches=open.filter(m=>(m.lg||'Autres compétitions')===lg).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
   const head=h('div','league-title',null,h('div',null,'🏆 '+lg),h('div','league-sub',null,matches.length+' match'+(matches.length>1?'s':'')+' · combinés calculés uniquement dans cette compétition'));
+  const leagueName=nz(lg);
+  const leagueColor=leagueName.includes('feminin')||leagueName.includes('women')?'#6D28D9':leagueName.includes('championsleague')||leagueName.includes('liguedeschampions')?'#1D4ED8':leagueName.includes('nations')?'#047857':'#C2410C';
+  head.style.color=leagueColor;
   A.appendChild(head);
   if(matches.length<2){
    A.appendChild(h('div','card',null,h('p','ia','Un seul match disponible : pas de combiné proposé pour éviter de mélanger cette compétition avec une autre.')));
