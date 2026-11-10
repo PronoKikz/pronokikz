@@ -8,7 +8,7 @@ try { require('dotenv').config(); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND
 const fs=require('fs');
 const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.ODDS_API_KEY,CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(',');
 if(!K){console.error('Clé Football Data manquante : renseigne FOOTBALL_DATA_API_KEY (ou FOOTBALL_DATA_KEY) dans .env ou dans les secrets GitHub.');process.exit(1)}
-const SPORT={FL1:'soccer_france_ligue_one',PL:'soccer_epl',PD:'soccer_spain_la_liga',SA:'soccer_italy_serie_a',BL1:'soccer_germany_bundesliga',CL:'soccer_uefa_champs_league',PPL:'soccer_portugal_primeira_liga',DED:'soccer_netherlands_eredivisie',ELC:'soccer_efl_champ'};
+const SPORT={FL1:'soccer_france_ligue_one',PL:'soccer_epl',PD:'soccer_spain_la_liga',SA:'soccer_italy_serie_a',BL1:'soccer_germany_bundesliga',CL:'soccer_uefa_champs_league',PPL:'soccer_portugal_primeira_liga',DED:'soccer_netherlands_eredivisie',ELC:'soccer_efl_champ',UWCL:'soccer_uefa_champs_league_women',NATIONS:'soccer_uefa_nations_league'};
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
@@ -193,6 +193,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   });
   const avgGoals=teamGames?goals/teamGames:2.8;
   const uwclOld=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('uwcl-')).map(m=>[String(m.id),m]));
+  let uwclOdds=[];if(OD){try{uwclOdds=await oddsFor('UWCL')}catch(e){console.log('cotes UWCL : '+e.message)}}
   for(const e of parsed){
    const d=day(e.date);
    if(d<day(off(-14))||d>day(off(45)))continue;
@@ -224,6 +225,8 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    } else {
     m=applyExperts(m);
    }
+   const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
+   if(ev)m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
    out.push(m);seen.add(id);
   }
   console.log('Ligue des champions féminine :',parsed.length,'rencontres ESPN,',completed.length,'terminées');
@@ -263,6 +266,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   });
   const avgGoals=teamGames?goals/teamGames:1.25;
   const nationsOld=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('nations-')).map(m=>[String(m.id),m]));
+  let nationsOdds=[];if(OD){try{nationsOdds=await oddsFor('NATIONS')}catch(e){console.log('cotes Nations : '+e.message)}}
   for(const e of parsed){
    const d=day(e.date);
    if(d<day(off(-14))||d>day(off(30)))continue;
@@ -292,6 +296,8 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    } else {
     m=applyExperts(m);
    }
+   const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
+   if(ev)m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
    out.push(m);seen.add(id);
   }
   console.log('Ligue des nations UEFA :',parsed.length,'rencontres ESPN,',completed.length,'terminées');
