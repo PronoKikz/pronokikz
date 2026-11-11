@@ -72,7 +72,7 @@ const chooseResult=m=>{const p=marketAware1x2(m),rank=[['1',p[0]],['N',p[1]],['2
  if(best[0]==='N'&&best[1]>=.55)return 'N';
  return dc(m).sort((a,b)=>b[1]-a[1])[0][0];
 };
-function whyPick(m){const p=marketAware1x2(m),k=m.fin,fmt=x=>Math.round(x*100)+' %';let out='';
+function whyPick(m){if(m.aiWhy)return m.aiWhy+(m.aiRisk?' Risque identifié : '+m.aiRisk:'');const p=marketAware1x2(m),k=m.fin,fmt=x=>Math.round(x*100)+' %';let out='';
  if(k==='1')out='Le choix est la victoire de '+m.home+'. Le modèle lui attribue '+fmt(p[0])+', contre '+fmt(p[1])+' pour le nul et '+fmt(p[2])+' pour '+m.away+'. La victoire à domicile ressort nettement comme le scénario le plus probable.';
  else if(k==='2')out='Le choix est la victoire de '+m.away+'. Le modèle lui attribue '+fmt(p[2])+', contre '+fmt(p[1])+' pour le nul et '+fmt(p[0])+' pour '+m.home+'. La victoire à l’extérieur ressort nettement comme le scénario le plus probable.';
  else if(k==='N')out='Le nul est retenu car c’est le scénario individuel le plus probable, estimé à '+fmt(p[1])+'. La confiance reste limitée : un match nul n’est jamais un résultat assuré.';
@@ -87,7 +87,7 @@ function whyPick(m){const p=marketAware1x2(m),k=m.fin,fmt=x=>Math.round(x*100)+'
 if(typeof EXTRA!=='undefined')EXTRA.forEach(x=>{if(!M.some(m=>m.id===x.id))M.push(x)});
 M.forEach(m=>{m.d=m.d||TD;if(m.sv&&(m.lock||m.r||m.d<TD))return;const e=EX.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
  if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));m.p1=Math.max(.02,m.p1+k);m.p2=Math.max(.02,m.p2-k);const t=m.p1+m.pN+m.p2;m.p1/=t;m.pN/=t;m.p2/=t}
- m.fin=chooseResult(m);m.ex=(e&&e.ex)||'';m.bt=(e&&e.bt)||m.bt||''});
+ m.fin=(e&&e.fin)||m.aiFin||chooseResult(m);m.ex=(e&&e.ex)||m.ex||'';m.bt=(e&&e.bt)||m.bt||''});
 const pick=m=>[m.fin,pf(m,m.fin)];
 function chk(m){if(!m.r)return null;const [a,b]=m.r,real=a>b?'1':a==b?'N':'2';
  return{s:a+' : '+b,r:m.fin.includes(real),b:(m.btts>=.5)==(a>0&&b>0),o:m.o25==null?null:(m.o25>=.5)==(a+b>2)}}
@@ -154,6 +154,7 @@ function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/
  const add=(l,kd,sd,p,lab)=>{const b=h('button','addb'+(hasBet(m,kd,sd)?' done':''),(hasBet(m,kd,sd)?'✓ ':'➕ ')+l);b.onclick=()=>addBet(m,kd,sd,lab,p);return b};
  e.appendChild(h('div','row3',null,add(X(k),'x2',k,pk,'Résultat '+X(k)),add('BTTS '+(m.btts>=.5?'oui':'non'),'btts',m.btts>=.5?'oui':'non',Math.max(m.btts,1-m.btts),'BTTS '+(m.btts>=.5?'oui':'non')),m.o25!=null?add(m.o25>=.5?'+2,5':'-2,5','o25',m.o25>=.5?'plus':'moins',Math.max(m.o25,1-m.o25),(m.o25>=.5?'+2,5':'-2,5')+' buts'):h('div',null,'')));
  if(m.scs)e.appendChild(h('p','ia','🎯 Scores probables : '+m.scs.map(([x,p])=>x+' ('+pc(p)+')').join(' · ')));
+ if(m.aiWhy)e.appendChild(h('p','ia','🧠 Mon analyse · confiance '+(m.aiConfidence||'–')+'/100 : '+m.aiWhy+(m.aiRisk?' Risque : '+m.aiRisk:'')));
  if(m.mk)e.appendChild(h('p','ia','💹 Pronos mélangés avec les cotes des bookmakers'+(vb?' · le modèle voit plus de chances que le marché sur au moins un résultat (💎 Value)':'')));
  if(m.fm)e.appendChild(h('p','ia','📈 Forme (5 / 10 derniers) : '+m.fm[0]+(m.f10?' / '+m.f10[0]:'')+' pts – '+m.fm[1]+(m.f10?' / '+m.f10[1]:'')+' pts'));
  if(m.hh&&m.hh[0]+m.hh[1]+m.hh[2]>0)e.appendChild(h('p','ia','🤝 Confrontations directes : '+m.hh[0]+' V · '+m.hh[1]+' N · '+m.hh[2]+' D pour '+m.home));
