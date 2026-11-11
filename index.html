@@ -179,22 +179,17 @@ function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.f
 function conseils(open){
  const matches=open.filter(isOpen).slice().sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  if(!matches.length){A.appendChild(h('p','mu','Pas de match à venir pour proposer des conseils.'));return}
- // Les combinés de conseils utilisent des fenêtres successives de 3 jours.
- // Les compétitions peuvent être mélangées dans une fenêtre, jamais au-delà.
- const base=new Date(matches[0].d+'T12:00:00'),groups=new Map();
- matches.forEach(m=>{const delta=Math.floor((new Date(m.d+'T12:00:00')-base)/86400000),start=new Date(base);start.setDate(start.getDate()+Math.floor(delta/3)*3);const key=start.toISOString().slice(0,10);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(m)});
- [...groups.entries()].forEach(([start,list])=>{
-  const end=new Date(start+'T12:00:00');end.setDate(end.getDate()+2);
-  const fmt=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
-  const leagues=[...new Set(list.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
-  const head=h('div','league-title',null,h('div',null,'🏆 Combinés du '+fmt(new Date(start+'T12:00:00'))+' au '+fmt(end)),h('div','league-sub',null,list.length+' match'+(list.length>1?'s':'')+' · '+leagues.join(' · ')+' · dates mélangées sur 3 jours maximum'));
-  A.appendChild(head);
-  const key='window-'+start+'-';
-  cyc(key+'safe',safeCands(list),'reco','Combiné safe · toutes compétitions (cote ~2,5)','Sélections prudentes parmi les matchs de cette période de 3 jours. Vérifie la cote réelle chez ton bookmaker.');
-  cyc(key+'tip',conseilCands(list),'tip','Mon conseil · toutes compétitions (cote 2 à 5)','Meilleure probabilité possible parmi les matchs de cette période de 3 jours. Vérifie la cote réelle chez ton bookmaker.');
-  cyc(key+'fun',diversify(beam(list,.2,5,favLegs),6),'fun','Combiné fun · toutes compétitions (cote 5 et plus)','Sélections de cette période de 3 jours, toutes compétitions confondues. À jouer seulement si la cote réelle du bookmaker convient.');
-  cyc(key+'f40',diversify(beam(list,.025,8),5),'fun','Combiné cote 40+ · toutes compétitions','Combiné très risqué, construit uniquement avec les matchs de cette période de 3 jours.','Pas assez de matchs dans cette période pour atteindre une cote de 40.');
- });
+ // Une seule sélection sur les 3 prochains jours : trois conseils, sans répétition par période.
+ const base=new Date(matches[0].d+'T12:00:00');
+ const list=matches.filter(m=>Math.floor((new Date(m.d+'T12:00:00')-base)/86400000)<3);
+ const end=new Date(base);end.setDate(end.getDate()+2);
+ const fmt=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+ const leagues=[...new Set(list.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const head=h('div','league-title',null,h('div',null,'🏆 Conseils du '+fmt(base)+' au '+fmt(end)),h('div','league-sub',null,list.length+' match'+(list.length>1?'s':'')+' · '+leagues.join(' · ')));
+ A.appendChild(head);
+ cyc('advice-safe',safeCands(list),'reco','1. Combiné prudent · cote ~2,5','Les sélections les plus prudentes sur les matchs des 3 prochains jours. Vérifie toujours la cote réelle.');
+ cyc('advice-tip',conseilCands(list),'tip','2. Mon conseil · cote 2 à 5','Le meilleur compromis entre probabilité et cote selon l’analyse. Vérifie toujours la cote réelle.');
+ cyc('advice-fun',diversify(beam(list,.2,5,favLegs),6),'fun','3. Combiné audacieux · cote 5+','Plus risqué, pour tenter une cote plus élevée. À jouer uniquement si la cote réelle convient.');
 }
 function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(!S||!S.tot.n){A.appendChild(h('div','card',null,h('div','ttl','🧠 Apprentissage'),h('p','ia','Le modèle enregistre chaque prono avant le match, puis le compare au résultat réel. Rien à afficher tant qu’aucun match enregistré n’est terminé.')));return}
