@@ -5,10 +5,10 @@ import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, Scro
 type ThemeName = 'dark' | 'light' | 'pink' | 'football' | 'system';
 type ThemePalette = { bg:string; card:string; muted:string; accent:string; text:string; border:string; surface:string; nav:string; activeSurface:string; buttonText:string; statusBar:'light-content'|'dark-content' };
 const THEMES: Record<Exclude<ThemeName,'system'>,ThemePalette> = {
- dark:{bg:'#0A1117',card:'#182630',muted:'#B0BEC9',accent:'#4DA3FF',text:'#FFFFFF',border:'#30414D',surface:'#14212B',nav:'#111D26',activeSurface:'#152D46',buttonText:'#06110D',statusBar:'light-content'},
+ dark:{bg:'#0B0D10',card:'#161A20',muted:'#9AA4B2',accent:'#38BDF8',text:'#F4F6F9',border:'#29313B',surface:'#111820',nav:'#10151B',activeSurface:'#102B3A',buttonText:'#061018',statusBar:'light-content'},
  light:{bg:'#F3F6FA',card:'#FFFFFF',muted:'#64748B',accent:'#2563EB',text:'#17212B',border:'#D8E0E8',surface:'#E9EFF5',nav:'#E7EDF4',activeSurface:'#DBEAFE',buttonText:'#FFFFFF',statusBar:'dark-content'},
  pink:{bg:'#FFF3F8',card:'#FFFFFF',muted:'#93677D',accent:'#C83E83',text:'#482337',border:'#EFC5D8',surface:'#FBE3EE',nav:'#F9E6EF',activeSurface:'#F6D2E3',buttonText:'#FFFFFF',statusBar:'dark-content'},
- football:{bg:'#071B12',card:'#10291D',muted:'#B0CDB9',accent:'#65D68A',text:'#F1FFF5',border:'#28523A',surface:'#153624',nav:'#0C2117',activeSurface:'#19452C',buttonText:'#052010',statusBar:'light-content'}
+ football:{bg:'#0B0D10',card:'#161A20',muted:'#9AA4B2',accent:'#38BDF8',text:'#F4F6F9',border:'#29313B',surface:'#111820',nav:'#10151B',activeSurface:'#102B3A',buttonText:'#061018',statusBar:'light-content'}
 };
 const THEME_OPTIONS: {id:ThemeName;label:string;icon:string;hint:string}[] = [
  {id:'dark',label:'Sombre',icon:'🌙',hint:'Le style sombre actuel.'},
@@ -158,14 +158,14 @@ export default function App() {
   <Pressable style={s.rerollButton} onPress={onReroll}><Text style={s.rerollText}>↻ Relancer ce combiné</Text></Pressable>
  </View>;
 
- const competitionAccent=(league:string)=>{const name=league.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(name.includes('feminin')||name.includes('women'))return '#F472B6';if(name.includes('champions league')||name.includes('ligue des champions'))return '#60A5FA';if(name.includes('nations'))return '#34D399';return '#FB923C';};
+ const competitionAccent=(league:string)=>{const name=league.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(name.includes('feminin')||name.includes('women'))return '#F472B6';if(name.includes('champions league')||name.includes('ligue des champions'))return '#60A5FA';if(name.includes('nations'))return '#F5B800';return '#FB923C';};
  const Probability=({label,value,active=false}:{label:string;value?:number;active?:boolean})=><View style={[s.probCell,active&&s.probCellActive]}><Text style={[s.probLabel,active&&s.probLabelActive]}>{label}</Text><Text style={[s.probValue,active&&s.probValueActive]}>{pct(value)}</Text></View>;
  const winningOutcome=(m:Match)=>{if(m.p1==null||m.pN==null||m.p2==null)return null;const [p1,pN,p2]=effective1x2(m),best=Math.max(p1,pN,p2);return { '1':p1===best,'N':pN===best,'2':p2===best };};
  const MatchCard=({match}:{match:Match})=><Pressable style={s.card} onPress={()=>setSelected(match)}>
   <View style={s.meta}><Text style={[s.league,{color:competitionAccent(match.lg||'Compétition')}]}>{match.lg||'Compétition'}</Text><Text style={s.date}>{dateLabel(match.d,match.h)}</Text></View>
   <View style={s.teams}><View style={s.teamSide}>{!!match.hc&&<Image source={{uri:match.hc}} style={s.crest}/>}<Text style={s.team}>{match.home||'Domicile'}</Text></View><Text style={s.vs}>{match.r?match.r[0]+'-'+match.r[1]:'VS'}</Text><View style={s.teamSide}>{!!match.ac&&<Image source={{uri:match.ac}} style={s.crest}/>}<Text style={s.team}>{match.away||'Extérieur'}</Text></View></View>
   <View style={s.probs}><Probability label="1" value={effective1x2(match)[0]} active={!!winningOutcome(match)?.['1']}/><Probability label="N" value={effective1x2(match)[1]} active={!!winningOutcome(match)?.N}/><Probability label="2" value={effective1x2(match)[2]} active={!!winningOutcome(match)?.['2']}/></View>
-  <View style={s.footerRow}><Text style={s.pick}>PRONO : {displayedPrediction(match)}</Text>{!!match.r&&<Text style={{color:predictionCorrect(match)===true?'#22C55E':predictionCorrect(match)===false?'#F87171':palette.muted,fontSize:10,fontWeight:"900"}}>{predictionCorrect(match)===null?'NON ÉVALUÉ':predictionCorrect(match)?'✓ PRONO CORRECT':'✕ PRONO FAUX'}</Text>}<Text style={s.link}>Détails →</Text></View>
+  <View style={s.footerRow}><Text style={s.pick}>PRONO : {displayedPrediction(match)}</Text>{!!match.r&&<Text style={{color:predictionCorrect(match)===true?'#38BDF8':predictionCorrect(match)===false?'#F87171':palette.muted,fontSize:10,fontWeight:"900"}}>{predictionCorrect(match)===null?'NON ÉVALUÉ':predictionCorrect(match)?'✓ PRONO CORRECT':'✕ PRONO FAUX'}</Text>}<Text style={s.link}>Détails →</Text></View>
  </Pressable>;
  const StatBox=({label,value}:{label:string;value:string|number})=><View style={s.statBox}><Text style={s.statValue}>{value}</Text><Text style={s.statLabel}>{label}</Text></View>;
  return <SafeAreaView style={s.safe}><StatusBar barStyle={palette.statusBar}/><View style={s.container}>
