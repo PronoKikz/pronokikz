@@ -111,6 +111,7 @@ function blendMarketOdds(m,ev,marketWeight=.85){
 const { pickScorer } = require('./scorer');
 const { buildHistoryEntry } = require('./history');
 const { pickScorerWithAI } = require('./ai_scorer');
+const { pickMatchWithAI } = require('./ai_match');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
 let EXPL=[];try{EXPL=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';EXPERTS')||[]}catch(e){console.log('expert.js illisible : '+e.message)}
 function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
@@ -118,7 +119,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));p1=Math.max(.02,p1+k);p2=Math.max(.02,p2-k);const t=p1+pN+p2;p1/=t;pN/=t;p2/=t}
  const rank=[['1',p1],['N',pN],['2',p2]].sort((a,b)=>b[1]-a[1]),d=[['1N',p1+pN],['N2',pN+p2],['12',p1+p2]].sort((a,b)=>b[1]-a[1])[0];
  const fin=e&&e.fin?e.fin:((rank[0][0]==='1'||rank[0][0]==='2')&&rank[0][1]>=.56&&rank[0][1]-rank[1][1]>=.12?rank[0][0]:rank[0][0]==='N'&&rank[0][1]>=.55?'N':d[0]);
- return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin,ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
+ return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin,expertManual:!!(e&&e.fin),ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
 (async()=>{
  const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
@@ -166,7 +167,8 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     } else m={...m,bt:'',btp:0,btSource:'none'}
    }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
-   m={...applyExperts(m),pt:new Date().toISOString()}}
+   m={...applyExperts(m),pt:new Date().toISOString()};
+   if(process.env.OPENAI_API_KEY&&!m.expertManual&&m.aiAt!==today){try{const ai=await pickMatchWithAI(m);if(ai)m={...m,...ai,fin:ai.aiFin}}catch(e){console.log('Analyse IA indisponible pour '+m.home+' - '+m.away+' : '+e.message)}}}
   const ft=f.score&&f.score.fullTime;
   out.push({...m,d:day(new Date(f.utcDate)),h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(new Date(f.utcDate)),
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null});seen.add(f.id)}
