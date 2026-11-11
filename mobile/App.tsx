@@ -7,7 +7,7 @@ type ThemePalette = { bg:string; card:string; muted:string; accent:string; text:
 const THEMES: Record<Exclude<ThemeName,'system'>,ThemePalette> = {
  dark:{bg:'#0B0D10',card:'#161A20',muted:'#9AA4B2',accent:'#38BDF8',text:'#F4F6F9',border:'#29313B',surface:'#111820',nav:'#10151B',activeSurface:'#102B3A',buttonText:'#061018',statusBar:'light-content'},
  light:{bg:'#F3F6FA',card:'#FFFFFF',muted:'#64748B',accent:'#2563EB',text:'#17212B',border:'#D8E0E8',surface:'#E9EFF5',nav:'#E7EDF4',activeSurface:'#DBEAFE',buttonText:'#FFFFFF',statusBar:'dark-content'},
- pink:{bg:'#FFF3F8',card:'#FFFFFF',muted:'#93677D',accent:'#C83E83',text:'#482337',border:'#EFC5D8',surface:'#FBE3EE',nav:'#F9E6EF',activeSurface:'#F6D2E3',buttonText:'#FFFFFF',statusBar:'dark-content'},
+ pink:{bg:'#FBE3EF',card:'#FFF8FB',muted:'#80566A',accent:'#A91D5D',text:'#3A1729',border:'#E6A9C5',surface:'#F6D3E3',nav:'#F1C6D9',activeSurface:'#EAB0CA',buttonText:'#FFFFFF',statusBar:'dark-content'},
  football:{bg:'#0B0D10',card:'#161A20',muted:'#9AA4B2',accent:'#38BDF8',text:'#F4F6F9',border:'#29313B',surface:'#111820',nav:'#10151B',activeSurface:'#102B3A',buttonText:'#061018',statusBar:'light-content'}
 };
 const THEME_OPTIONS: {id:ThemeName;label:string;icon:string;hint:string}[] = [
