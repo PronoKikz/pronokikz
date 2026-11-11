@@ -87,7 +87,7 @@ function whyPick(m){const p=marketAware1x2(m),k=m.fin,fmt=x=>Math.round(x*100)+'
 if(typeof EXTRA!=='undefined')EXTRA.forEach(x=>{if(!M.some(m=>m.id===x.id))M.push(x)});
 M.forEach(m=>{m.d=m.d||TD;if(m.sv&&(m.lock||m.r||m.d<TD))return;const e=EX.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
  if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));m.p1=Math.max(.02,m.p1+k);m.p2=Math.max(.02,m.p2-k);const t=m.p1+m.pN+m.p2;m.p1/=t;m.pN/=t;m.p2/=t}
- m.fin=e&&e.fin?e.fin:chooseResult(m);m.ex=(e&&e.ex)||'';m.bt=(e&&e.bt)||m.bt||''});
+ m.fin=chooseResult(m);m.ex=(e&&e.ex)||'';m.bt=(e&&e.bt)||m.bt||''});
 const pick=m=>[m.fin,pf(m,m.fin)];
 function chk(m){if(!m.r)return null;const [a,b]=m.r,real=a>b?'1':a==b?'N':'2';
  return{s:a+' : '+b,r:m.fin.includes(real),b:(m.btts>=.5)==(a>0&&b>0),o:m.o25==null?null:(m.o25>=.5)==(a+b>2)}}
