@@ -1,1 +1,36 @@
-{"name": "Prono Foot IA", "short_name": "Prono Foot", "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#0e1511", "theme_color": "#12a150", "icons": [{"src": "icon-512.png", "sizes": "192x192", "type": "image/png", "purpose": "any"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}], "id": "./index.html", "description": "Pronostics foot du jour : 1/N/2, les 2 équipes marquent, conseil du jour et combinés.", "lang": "fr", "orientation": "portrait", "categories": ["sports"]}
+{
+  "name": "Prono Foot IA",
+  "short_name": "Prono Foot",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "./index.html",
+  "description": "Pronostics foot du jour : 1/N/2, les 2 équipes marquent, conseil du jour et combinés.",
+  "lang": "fr",
+  "orientation": "portrait",
+  "categories": [
+    "sports"
+  ]
+}
