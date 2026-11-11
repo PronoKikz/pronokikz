@@ -47,6 +47,7 @@ h2{font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:.06e
 .addb{padding:8px 4px;border-radius:10px;border:1px solid var(--gold);background:#10141a;color:var(--gold);font-weight:800;font-size:13px}.addb.done{border-color:var(--g);color:var(--g)}
 .inp{width:100%;padding:8px;border-radius:10px;border:1px solid var(--bd);background:#10141a;color:var(--tx);font-size:16px}.lab{font-size:12px;color:var(--mu);margin:6px 0 3px}.del{border:0;background:#3a1518;color:var(--r);border-radius:8px;padding:4px 9px;font-weight:800}
 .ia{margin:10px 0 0;font-size:13px;color:var(--mu)}
+.reason{margin-top:12px;padding:10px 12px;border:1px solid var(--bd);border-radius:12px;background:#10141a}.reason summary{color:var(--gold);font-size:14px;font-weight:800;cursor:pointer}.reason[open] summary{margin-bottom:7px}.reason p{margin:0;color:var(--mu);font-size:13px;line-height:1.45}
 </style></head><body><main>
 <h1>⚽ Pronos <span>du jour</span></h1>
 <p class="mu" id="d"></p>
@@ -64,20 +65,38 @@ const TD=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new D
 const EX=typeof EXPERTS!=='undefined'?EXPERTS:[];
 const marketAware1x2=m=>{const model=[m.p1??0,m.pN??0,m.p2??0];if(m.mkp&&m.mkp.length===3)return model;const q=m.mkOdds&&m.mkOdds.h2h,prices=q&&[q.home&&q.home.price,q.draw&&q.draw.price,q.away&&q.away.price];if(!prices||!prices.every(x=>Number.isFinite(x)&&x>1))return model;const raw=prices.map(x=>1/x),sum=raw.reduce((a,b)=>a+b,0);return sum?model.map((p,i)=>.15*p+.85*raw[i]/sum):model;};
 const sg=m=>{const p=marketAware1x2(m);return [['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1])[0]};
-const dc=m=>[['1N',m.p1+m.pN],['N2',m.pN+m.p2],['12',m.p1+m.p2]];
-const pf=(m,f)=>f.split('').reduce((a,c)=>a+(c=='1'?m.p1:c=='N'?m.pN:m.p2),0);
+const dc=m=>{const p=marketAware1x2(m);return [['1N',p[0]+p[1]],['N2',p[1]+p[2]],['12',p[0]+p[2]]]};
+const pf=(m,f)=>{const p=marketAware1x2(m);return f.split('').reduce((a,c)=>a+(c=='1'?p[0]:c=='N'?p[1]:p[2]),0)};
+const chooseResult=m=>{const p=marketAware1x2(m),rank=[['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1]),best=rank[0],next=rank[1];
+ if((best[0]==='1'||best[0]==='2')&&best[1]>=.56&&best[1]-next[1]>=.12)return best[0];
+ if(best[0]==='N'&&best[1]>=.55)return 'N';
+ return dc(m).sort((a,b)=>b[1]-a[1])[0][0];
+};
+function whyPick(m){const p=marketAware1x2(m),k=m.fin,fmt=x=>Math.round(x*100)+' %';let out='';
+ if(k==='1')out='Le choix est la victoire de '+m.home+'. Le modèle lui attribue '+fmt(p[0])+', contre '+fmt(p[1])+' pour le nul et '+fmt(p[2])+' pour '+m.away+'. La victoire à domicile ressort nettement comme le scénario le plus probable.';
+ else if(k==='2')out='Le choix est la victoire de '+m.away+'. Le modèle lui attribue '+fmt(p[2])+', contre '+fmt(p[1])+' pour le nul et '+fmt(p[0])+' pour '+m.home+'. La victoire à l’extérieur ressort nettement comme le scénario le plus probable.';
+ else if(k==='N')out='Le nul est retenu car c’est le scénario individuel le plus probable, estimé à '+fmt(p[1])+'. La confiance reste limitée : un match nul n’est jamais un résultat assuré.';
+ else if(k==='1N')out='Je retiens 1N : '+m.home+' gagne ou fait match nul. Cette couverture représente '+fmt(p[0]+p[1])+' selon le modèle. La victoire extérieure seule représente '+fmt(p[2])+' ; la double chance est ici plus prudente qu’un 1 sec.';
+ else if(k==='N2')out='Je retiens N2 : '+m.away+' gagne ou fait match nul. Cette couverture représente '+fmt(p[1]+p[2])+' selon le modèle. La victoire à domicile seule représente '+fmt(p[0])+' ; la double chance est ici plus prudente qu’un 2 sec.';
+ else if(k==='12')out='Je retiens 12 : l’une des deux équipes gagne, sans match nul. Cette option représente '+fmt(p[0]+p[2])+' selon le modèle, contre '+fmt(p[1])+' pour le nul.';
+ else out='Le choix est construit à partir des probabilités estimées pour les trois issues du match.';
+ const extra=[];if(m.fm&&m.fm.length>=2)extra.push('Indicateur de forme récent : '+m.home+' '+m.fm[0]+' point(s), '+m.away+' '+m.fm[1]+' point(s).');
+ if(m.hh&&m.hh.length>=3&&m.hh[0]+m.hh[1]+m.hh[2]>0)extra.push('Confrontations directes enregistrées : '+m.hh[0]+' victoire(s), '+m.hh[1]+' nul(s) et '+m.hh[2]+' défaite(s) pour '+m.home+'.');
+ return out+(extra.length?' '+extra.join(' '):'');
+}
 if(typeof EXTRA!=='undefined')EXTRA.forEach(x=>{if(!M.some(m=>m.id===x.id))M.push(x)});
-M.forEach(m=>{m.d=m.d||TD;if(m.sv)return;const e=EX.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
+M.forEach(m=>{m.d=m.d||TD;if(m.sv&&(m.lock||m.r||m.d<TD))return;const e=EX.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
  if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));m.p1=Math.max(.02,m.p1+k);m.p2=Math.max(.02,m.p2-k);const t=m.p1+m.pN+m.p2;m.p1/=t;m.pN/=t;m.p2/=t}
- const s=sg(m),d=dc(m).sort((a,b)=>b[1]-a[1])[0];
- m.fin=e&&e.fin?e.fin:(s[1]>=.55?s[0]:d[0]);m.ex=(e&&e.ex)||'';m.bt=(e&&e.bt)||m.bt||''});
+ m.fin=e&&e.fin?e.fin:chooseResult(m);m.ex=(e&&e.ex)||'';m.bt=(e&&e.bt)||m.bt||''});
 const pick=m=>[m.fin,pf(m,m.fin)];
 function chk(m){if(!m.r)return null;const [a,b]=m.r,real=a>b?'1':a==b?'N':'2';
  return{s:a+' : '+b,r:m.fin.includes(real),b:(m.btts>=.5)==(a>0&&b>0),o:m.o25==null?null:(m.o25>=.5)==(a+b>2)}}
 function isOpen(m){if(m.r)return false;if(m.d>TD)return true;if(m.d<TD)return false;const [H,I]=m.h.split(':'),n=new Date();return n.getHours()*60+n.getMinutes()<+H*60+ +I}
 const mk=(m,l,p,kd,sd)=>({m:nm(m)+' ('+(m.lg||'Autres compétitions')+')',k:nm(m),id:m.id,l,p,kd,sd});
-function legsSafe(m){const p=marketAware1x2(m),f=[['1N',p[0]+p[1]],['N2',p[1]+p[2]],['12',p[0]+p[2]]].sort((a,b)=>b[1]-a[1]);if(m.fin.length==2)f.sort((a,b)=>(b[0]==m.fin)-(a[0]==m.fin)||b[1]-a[1]);
- return f.slice(0,2).map(([c,p])=>mk(m,(c=='1N'?m.home+' ou nul':c=='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',p,'x2',c))}
+function legsSafe(m){const p=marketAware1x2(m),rank=[['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1]),best=rank[0],next=rank[1],f=dc(m).sort((a,b)=>b[1]-a[1]);
+ const strong=(best[0]==='1'||best[0]==='2')&&best[1]>=.62&&best[1]-next[1]>=.15;
+ const picks=strong?[[best[0],best[1]],f[0]]:f.slice(0,2);
+ return picks.map(([c,v])=>mk(m,c==='1'?m.home+' gagne':c==='2'?m.away+' gagne':(c==='1N'?m.home+' ou nul':c==='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',v,'x2',c))}
 function legsFun(m){return allLegs(m).sort((a,b)=>b.p-a.p).slice(0,2)}
 function cands(list,mx,safe){const L=list.flatMap(safe?legsSafe:legsFun),nb=new Set(L.map(x=>x.k)).size,out=[],ok=(...a)=>new Set(a.map(x=>x.k)).size==a.length,want=safe?[Math.min(3,nb)]:[2,3];
  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){
@@ -142,6 +161,7 @@ function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/
  if(m.bt)e.appendChild(h('div','bt',null,h('span',null,'⚽ Buteur conseillé'),h('b',null,m.bt)));
  if(m.bt)e.appendChild(h('p','ia','⚠️ À vérifier : est-il titulaire et disponible ? L’appli ne connaît ni ses minutes jouées ni les blessures.'));
  if(m.ex)e.appendChild(h('p','ia','👥 '+m.ex));
+ const why=h('details','reason',null);why.appendChild(h('summary',null,'💡 Pourquoi ce pronostic ?'));why.appendChild(h('p','ia',whyPick(m)));e.appendChild(why);
  e.appendChild(c?h('div','fin','Score final '+c.s+'  ·  Résultat '+(c.r?'✅':'❌')+'  ·  BTTS '+(c.b?'✅':'❌')):h('p','ia','🤖 '+(m.ia||'')));return e}
 const NLG='Ligue des nations';
 let day=(()=>{const f=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort()[0];return f||TD})(),view='m',F={lg:'',hi:false};
