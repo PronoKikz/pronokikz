@@ -116,8 +116,9 @@ let EXPL=[];try{EXPL=require('vm').runInNewContext(fs.readFileSync('expert.js','
 function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
  let[p1,pN,p2]=m.b0||[m.p1,m.pN,m.p2];
  if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));p1=Math.max(.02,p1+k);p2=Math.max(.02,p2-k);const t=p1+pN+p2;p1/=t;pN/=t;p2/=t}
- const s=[['1',p1],['N',pN],['2',p2]].sort((a,b)=>b[1]-a[1])[0],d=[['1N',p1+pN],['N2',pN+p2],['12',p1+p2]].sort((a,b)=>b[1]-a[1])[0];
- return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin:e&&e.fin?e.fin:(s[1]>=.55?s[0]:d[0]),ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
+ const rank=[['1',p1],['N',pN],['2',p2]].sort((a,b)=>b[1]-a[1]),d=[['1N',p1+pN],['N2',pN+p2],['12',p1+p2]].sort((a,b)=>b[1]-a[1])[0];
+ const fin=e&&e.fin?e.fin:((rank[0][0]==='1'||rank[0][0]==='2')&&rank[0][1]>=.56&&rank[0][1]-rank[1][1]>=.12?rank[0][0]:rank[0][0]==='N'&&rank[0][1]>=.55?'N':d[0]);
+ return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin,ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
 (async()=>{
  const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
