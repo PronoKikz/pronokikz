@@ -26,7 +26,7 @@ const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 const effective1x2 = (m: Match): [number,number,number] => { const model=[m.p1??0,m.pN??0,m.p2??0]; if(m.mkp?.length===3)return model; const q=m.mkOdds?.h2h,prices=[q?.home?.price,q?.draw?.price,q?.away?.price]; if(!prices.every(x=>Number.isFinite(x)&&x!>1))return model; const raw=prices.map(x=>1/(x as number)),sum=raw.reduce((a,b)=>a+b,0); if(!sum)return model; const market=raw.map(x=>x/sum); return model.map((p,i)=>0.15*p+0.85*market[i]) as [number,number,number]; };
 const prediction = (m: Match) => { if (m.p1 == null || m.pN == null || m.p2 == null) return 'Analyse indisponible'; const [p1,pN,p2]=effective1x2(m),best = Math.max(p1,pN,p2); return best === p1 ? '1 — domicile' : best === pN ? 'N — nul' : '2 — extérieur'; };
-const normalizeSelection = (value?: string) => String(value || '').toUpperCase().replace(/X/g,'N').replace(/[\\s/|+_-]/g,'');
+const normalizeSelection = (value?: string) => String(value || '').toUpperCase().replace(/X/g,'N').replace(/[\s/|+_-]/g,'');
 const predictionCorrect = (m: Match): boolean | null => {
  if (!m.r || m.r.length !== 2 || !Number.isFinite(m.r[0]) || !Number.isFinite(m.r[1])) return null;
  const actual = m.r[0] > m.r[1] ? '1' : m.r[0] === m.r[1] ? 'N' : '2';
