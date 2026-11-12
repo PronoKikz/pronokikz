@@ -47,8 +47,7 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
   const [p1,pN,p2]=effective1x2(m);
   const markets: [string, number | undefined, {price:number;bookmaker:string}|undefined][] = [
    ['Victoire domicile (1)',p1,m.mkOdds?.h2h?.home],['Match nul (N)',pN,m.mkOdds?.h2h?.draw],
-   ['Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away],['Plus de 2,5 buts',m.o25,m.mkOdds?.totals?.over25],
-   ['Moins de 2,5 buts',m.o25==null?undefined:1-m.o25,m.mkOdds?.totals?.under25]
+   ['Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away]
   ];
   const picks=markets.filter(([market,p,q])=>p!==undefined&&Number.isFinite(p)&&p>=minProbability&&p<=.94&&!!q&&Number.isFinite(q.price)&&q.price>1)
    .map(([market,probability,q])=>({id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h),market,probability:probability!,odds:q!.price,bookmaker:q!.bookmaker}));
@@ -160,7 +159,7 @@ export default function App() {
  const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
   <Text style={s.comboTitle}>{title}</Text>
   {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE</Text><Text style={s.comboOddsValue}>{combo.odds.toFixed(2).replace('.',',')}</Text></View>
-   {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.info}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market} · Cote {p.odds.toFixed(2).replace('.',',')}</Text></View></View>)}
+   {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market}</Text><Text style={s.comboOddsLabel}>COTE DU PRONOSTIC : {p.odds.toFixed(2).replace('.',',')}</Text></View></View>)}
   </>:<Text style={s.info}>Pas assez de matchs ou de cotes disponibles pour ce conseil.</Text>}
   <Pressable style={s.rerollButton} onPress={()=>rerollLeagueCombo(groupId,tier)}><Text style={s.rerollText}>↻ Relancer ce conseil</Text></Pressable>
  </View>;
