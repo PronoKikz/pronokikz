@@ -26,7 +26,17 @@ const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 const effective1x2 = (m: Match): [number,number,number] => { const model=[m.p1??0,m.pN??0,m.p2??0]; if(m.mkp?.length===3)return model; const q=m.mkOdds?.h2h,prices=[q?.home?.price,q?.draw?.price,q?.away?.price]; if(!prices.every(x=>Number.isFinite(x)&&x!>1))return model; const raw=prices.map(x=>1/(x as number)),sum=raw.reduce((a,b)=>a+b,0); if(!sum)return model; const market=raw.map(x=>x/sum); return model.map((p,i)=>0.15*p+0.85*market[i]) as [number,number,number]; };
 const prediction = (m: Match) => { if (m.p1 == null || m.pN == null || m.p2 == null) return 'Analyse indisponible'; const [p1,pN,p2]=effective1x2(m),best = Math.max(p1,pN,p2); return best === p1 ? '1 — domicile' : best === pN ? 'N — nul' : '2 — extérieur'; };
-const predictionCorrect = (m: Match): boolean | null => { if (!m.r || m.r.length!==2 || m.p1==null || m.pN==null || m.p2==null) return null; const [p1,pN,p2]=effective1x2(m),best=Math.max(p1,pN,p2),predicted=best===p1?'1':best===pN?'N':'2',actual=m.r[0]>m.r[1]?'1':m.r[0]===m.r[1]?'N':'2'; return predicted===actual; };
+const normalizeSelection = (value?: string) => String(value || '').toUpperCase().replace(/X/g,'N').replace(/[\\s/|+_-]/g,'');
+const predictionCorrect = (m: Match): boolean | null => {
+ if (!m.r || m.r.length !== 2 || !Number.isFinite(m.r[0]) || !Number.isFinite(m.r[1])) return null;
+ const actual = m.r[0] > m.r[1] ? '1' : m.r[0] === m.r[1] ? 'N' : '2';
+ const selection = normalizeSelection(m.fin);
+ if (['1','N','2','1N','N2','12'].includes(selection)) return selection.includes(actual);
+ if (m.p1 == null || m.pN == null || m.p2 == null) return null;
+ const [p1,pN,p2] = effective1x2(m), best = Math.max(p1,pN,p2);
+ const predicted = best === p1 ? '1' : best === pN ? 'N' : '2';
+ return predicted === actual;
+};
 const formatSelection = (value?: string) => value ? value.replace(/^(1N|N2|12)$/, x => x.split('').join('/')) : '';
 const displayedPrediction = (m: Match) => formatSelection(m.fin) || prediction(m);
 type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number; bookmaker: string };
@@ -161,7 +171,7 @@ export default function App() {
   <View style={s.meta}><Text style={[s.league,{color:competitionAccent(match.lg||'Compétition')}]}>{match.lg||'Compétition'}</Text><Text style={s.date}>{dateLabel(match.d,match.h)}</Text></View>
   <View style={s.teams}><View style={s.teamSide}>{!!match.hc&&<Image source={{uri:match.hc}} style={s.crest}/>}<Text style={s.team}>{match.home||'Domicile'}</Text></View><Text style={s.vs}>{match.r?match.r[0]+'-'+match.r[1]:'VS'}</Text><View style={s.teamSide}>{!!match.ac&&<Image source={{uri:match.ac}} style={s.crest}/>}<Text style={s.team}>{match.away||'Extérieur'}</Text></View></View>
   <View style={s.probs}><Probability label="1" value={effective1x2(match)[0]} active={!!winningOutcome(match)?.['1']}/><Probability label="N" value={effective1x2(match)[1]} active={!!winningOutcome(match)?.N}/><Probability label="2" value={effective1x2(match)[2]} active={!!winningOutcome(match)?.['2']}/></View>
-  <View style={s.footerRow}><Text style={s.pick}>PRONO : {displayedPrediction(match)}</Text>{!!match.r&&<Text style={{color:predictionCorrect(match)===true?palette.accent:predictionCorrect(match)===false?'#FF6B8A':palette.muted,fontSize:10,fontWeight:"900"}}>{predictionCorrect(match)===null?'NON ÉVALUÉ':predictionCorrect(match)?'✓ PRONO CORRECT':'✕ PRONO FAUX'}</Text>}<Text style={s.link}>Détails →</Text></View>
+  <View style={s.footerRow}><Text style={s.pick}>PRONO : {displayedPrediction(match)}</Text>{!!match.r&&<Text style={{color:predictionCorrect(match)===true?palette.accent:predictionCorrect(match)===false?'#FF6B8A':palette.muted,fontSize:10,fontWeight:"900"}}>{predictionCorrect(match)===null?'NON ÉVALUÉ':predictionCorrect(match)?'✓ PRONO CORRECT':'✕ PRONO FAUX'}</Text>}<Text style={s.link}> · Détails →</Text></View>
  </Pressable>;
  const StatBox=({label,value}:{label:string;value:string|number})=><View style={s.statBox}><Text style={s.statValue}>{value}</Text><Text style={s.statLabel}>{label}</Text></View>;
  return <SafeAreaView style={s.safe}><StatusBar barStyle={palette.statusBar}/><View style={s.container}>
