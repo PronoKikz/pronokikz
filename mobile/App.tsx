@@ -20,7 +20,7 @@ const THEME_OPTIONS: {id:ThemeName;label:string;icon:string;hint:string}[] = [
 // Les données sont publiées automatiquement sur GitHub : aucun serveur sur le PC n'est nécessaire.
 const DATA_URL = 'https://raw.githubusercontent.com/PronoKikz/pronokikz/main/data.json';
 
-type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; mkp?: number[]; btts?: number; o25?: number; mkOdds?: {h2h?:{home?:{price:number;bookmaker:string};draw?:{price:number;bookmaker:string};away?:{price:number;bookmaker:string}};totals?:{over25?:{price:number;bookmaker:string};under25?:{price:number;bookmaker:string}}} | null; mkOddsAt?: string; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
+type Match = { id: string | number; lg?: string; home?: string; away?: string; d?: string; h?: string; hc?: string; ac?: string; p1?: number; pN?: number; p2?: number; mkp?: number[]; btts?: number; o25?: number; mkOdds?: {h2h?:{home?:{price:number;bookmaker:string};draw?:{price:number;bookmaker:string};away?:{price:number;bookmaker:string}};totals?:{over25?:{price:number;bookmaker:string};under25?:{price:number;bookmaker:string}};btts?:{yes?:{price:number;bookmaker:string};no?:{price:number;bookmaker:string}}} | null; mkOddsAt?: string; r?: number[] | null; ia?: string; bt?: string; ex?: string; fin?: string };
 type Stats = { total: number; upcoming: number; finished: number; evaluated: number; correct: number; accuracy: number | null };
 const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
@@ -39,18 +39,27 @@ const predictionCorrect = (m: Match): boolean | null => {
 };
 const formatSelection = (value?: string) => value ? value.replace(/^(1N|N2|12)$/, x => x.split('').join('/')) : '';
 const displayedPrediction = (m: Match) => formatSelection(m.fin) || prediction(m);
-type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number; bookmaker: string };
+type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number; bookmaker: string; estimated?: boolean };
 type Combo = { picks: ComboPick[]; odds: number; probability: number };
 const buildCombo = (matches: Match[], min: number, max: number, seed: number, minProbability = 0.35): Combo | null => {
  const byMatch: ComboPick[][] = [];
  matches.forEach(m => {
-  const [p1,pN,p2]=effective1x2(m);
-  const markets: [string, number | undefined, {price:number;bookmaker:string}|undefined][] = [
-   ['Victoire domicile (1)',p1,m.mkOdds?.h2h?.home],['Match nul (N)',pN,m.mkOdds?.h2h?.draw],
-   ['Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away]
-  ];
-  const picks=markets.filter(([market,p,q])=>p!==undefined&&Number.isFinite(p)&&p>=minProbability&&p<=.94&&!!q&&Number.isFinite(q.price)&&q.price>1)
-   .map(([market,probability,q])=>({id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h),market,probability:probability!,odds:q!.price,bookmaker:q!.bookmaker}));
+  const [p1,pN,p2]=effective1x2(m),base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
+  const markets: ComboPick[] = [];
+  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{if(q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker})};
+  add('Victoire domicile (1)',p1,m.mkOdds?.h2h?.home);
+  add('Match nul (N)',pN,m.mkOdds?.h2h?.draw);
+  add('Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away);
+  if(m.btts!=null&&m.btts>0&&m.btts<1){
+   const yes=m.btts>=.5,probability=yes?m.btts:1-m.btts,q=yes?m.mkOdds?.btts?.yes:m.mkOdds?.btts?.no;
+   if(q)add('Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,q);
+   else markets.push({...base,market:'Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,odds:1/probability,bookmaker:'Estimation du modèle',estimated:true});
+  }
+  if(m.o25!=null){
+   const over=m.o25>=.5,q=over?m.mkOdds?.totals?.over25:m.mkOdds?.totals?.under25;
+   if(q)add(over?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25),q);
+  }
+  const picks=markets.filter(p=>p.probability>=minProbability&&p.probability<=.94&&Number.isFinite(p.odds)&&p.odds>1);
   if(picks.length)byMatch.push(picks);
  });
  if(byMatch.length<2)return null;
@@ -143,9 +152,9 @@ export default function App() {
   const groupId=nextDate;
   return [{
    groupId,round,matches:dayMatches,
-   safe:buildCombo(dayMatches,2,4,(leagueSeeds[groupId]?.safe??0)+11,0.60),
-   medium:buildCombo(dayMatches,6,8,(leagueSeeds[groupId]?.medium??0)+29,0.48),
-   high:buildCombo(dayMatches,30,45,(leagueSeeds[groupId]?.high??0)+47,0.40)
+   safe:buildCombo(dayMatches,3,4,(leagueSeeds[groupId]?.safe??0)+11,0.60),
+   medium:buildCombo(dayMatches,5,7,(leagueSeeds[groupId]?.medium??0)+29,0.45),
+   high:buildCombo(dayMatches,33,50,(leagueSeeds[groupId]?.high??0)+47,0.35)
   }];
  },[upcoming,leagueSeeds]);
  const rerollLeagueCombo=(groupId:string,tier:'safe'|'medium'|'high')=>{
@@ -159,7 +168,7 @@ export default function App() {
  const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
   <Text style={s.comboTitle}>{title}</Text>
   {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE</Text><Text style={s.comboOddsValue}>{combo.odds.toFixed(2).replace('.',',')}</Text></View>
-   {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market}</Text><Text style={s.comboOddsLabel}>COTE DU PRONOSTIC : {p.odds.toFixed(2).replace('.',',')}</Text></View></View>)}
+   {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market}</Text><Text style={s.comboOddsLabel}>{p.estimated?'COTE THÉORIQUE (MODÈLE)':'COTE BOOKMAKER'} : {p.odds.toFixed(2).replace('.',',')}</Text></View></View>)}
   </>:<Text style={s.info}>Pas assez de matchs ou de cotes disponibles pour ce conseil.</Text>}
   <Pressable style={s.rerollButton} onPress={()=>rerollLeagueCombo(groupId,tier)}><Text style={s.rerollText}>↻ Relancer ce conseil</Text></Pressable>
  </View>;
@@ -182,7 +191,7 @@ export default function App() {
     {tab==='Accueil'&&<><View style={s.statsRow}><StatBox label="À venir" value={stats?.upcoming??upcoming.length}/><StatBox label="Terminés" value={stats?.finished??finished.length}/><StatBox label="Précision" value={stats?.accuracy==null?'—':stats.accuracy+'%'}/></View><View style={s.sectionHeader}><Text style={s.sectionTitle}>Prochains matchs</Text><Text style={s.counter}>{upcoming.length} MATCHS</Text></View>{loading?<ActivityIndicator color={palette.accent} size="large"/>:error?<Text style={s.error}>{error}</Text>:upcoming.length?upcoming.slice(0,4).map(m=><MatchCard key={String(m.id)} match={m}/>):<Text style={s.info}>Aucun match disponible pour le moment.</Text>}<Pressable style={s.button} onPress={()=>setTab('Matchs')}><Text style={s.buttonText}>Voir tous les matchs →</Text></Pressable></>}
     {tab==='Apparence'&&<><Text style={s.title}>Apparence</Text><Text style={s.heroDesc}>Choisis les couleurs de Pronokikz. Le changement s'applique immédiatement.</Text>{THEME_OPTIONS.map(option=><Pressable key={option.id} disabled={!themeLoaded} onPress={()=>changeTheme(option.id)} style={[s.card,s.themeOption,themeName===option.id&&s.themeOptionActive]}><View style={s.themeOptionLeft}><Text style={s.themeIcon}>{option.icon}</Text><View style={{flex:1}}><Text style={s.comboTitle}>{option.label}</Text><Text style={s.info}>{option.hint}</Text></View></View><Text style={s.themeCheck}>{themeName===option.id?'✓':'○'}</Text></Pressable>)}</>}
     {tab==='Matchs'&&<><Text style={s.title}>Tous les matchs</Text><Text style={s.heroDesc}>Rencontres à venir et analyses disponibles.</Text>{!loading&&!error&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filters} contentContainerStyle={s.filtersContent}>{leagueOptions.map(name=><Pressable key={name} onPress={()=>setLeagueFilter(name)} style={[s.filterChip,leagueFilter===name&&s.filterChipActive]}><Text style={[s.filterText,leagueFilter===name&&s.filterTextActive]}>{name}</Text></Pressable>)}</ScrollView>}{loading?<ActivityIndicator color={palette.accent}/>:error?<Text style={s.error}>{error}</Text>:visible.map(m=><MatchCard key={String(m.id)} match={m}/>)}{!loading&&!error&&!visible.length&&<Text style={s.info}>{leagueFilter==='Toutes'?'Aucun match à venir pour le moment.':'Aucune rencontre à venir pour cette compétition. Les prochains matchs apparaîtront automatiquement dès leur publication.'}</Text>}</>}
-    {tab==='Mon conseil'&&<><Text style={s.title}>Mon conseil</Text>{competitionCombos.map(group=><View key={group.groupId} style={{marginTop:8}}><ComboCard title="SAFE" combo={group.safe} accent={palette.accent} groupId={group.groupId} tier="safe"/><ComboCard title="ÉQUILIBRÉ · COTE 6/7" combo={group.medium} accent={palette.accent} groupId={group.groupId} tier="medium"/><ComboCard title="FUN" combo={group.high} accent={palette.accent} groupId={group.groupId} tier="high"/></View>)}{!competitionCombos.length&&<Text style={s.info}>Aucun match à venir pour le moment.</Text>}</>}
+    {tab==='Mon conseil'&&<><Text style={s.title}>Mon conseil</Text>{competitionCombos.map(group=><View key={group.groupId} style={{marginTop:8}}><ComboCard title="SAFE · COTE 3 À 4" combo={group.safe} accent={palette.accent} groupId={group.groupId} tier="safe"/><ComboCard title="MON CONSEIL · COTE 5 À 7" combo={group.medium} accent={palette.accent} groupId={group.groupId} tier="medium"/><ComboCard title="AUDACIEUX · COTE 33 À 50" combo={group.high} accent={palette.accent} groupId={group.groupId} tier="high"/></View>)}{!competitionCombos.length&&<Text style={s.info}>Aucun match à venir pour le moment.</Text>}</>}
     {tab==='Résultats'&&<><Text style={s.title}>Résultats & historique</Text><View style={s.statsRow}><StatBox label="Matchs évalués" value={stats?.evaluated??0}/><StatBox label="Bons pronos" value={stats?.correct??0}/><StatBox label="Réussite" value={stats?.accuracy==null?'—':stats.accuracy+'%'}/></View><Text style={s.sectionTitle}>Filtrer les résultats</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filters} contentContainerStyle={s.filtersContent}>{(['Tous','Gagnés','Perdus'] as const).map(name=><Pressable key={name} onPress={()=>setResultFilter(name)} style={[s.filterChip,resultFilter===name&&s.filterChipActive]}><Text style={[s.filterText,resultFilter===name&&s.filterTextActive]}>{name}</Text></Pressable>)}</ScrollView><ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filters} contentContainerStyle={s.filtersContent}>{['Toutes',...Array.from(new Set(finished.map(m=>m.lg).filter((x):x is string=>!!x))).sort((a,b)=>a.localeCompare(b,'fr'))].map(name=><Pressable key={name} onPress={()=>setResultLeagueFilter(name)} style={[s.filterChip,resultLeagueFilter===name&&s.filterChipActive]}><Text style={[s.filterText,resultLeagueFilter===name&&s.filterTextActive]}>{name}</Text></Pressable>)}</ScrollView>{loading?<ActivityIndicator color={palette.accent}/>:error?<Text style={s.error}>{error}</Text>:resultGroups.map(([date,dayMatches])=><View key={date}><View style={s.sectionHeader}><Text style={s.sectionTitle}>{date==='Date inconnue'?date:new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</Text><Text style={s.counter}>{dayMatches.length} MATCH{dayMatches.length>1?'S':''}</Text></View>{dayMatches.map(m=><MatchCard key={String(m.id)} match={m}/>)}</View>)}{!loading&&!error&&!visibleResults.length&&<Text style={s.info}>{finished.length?'Aucun résultat ne correspond à ces filtres.':'Les résultats apparaîtront après la mise à jour des données.'}</Text>}</>}
     {tab==='Stats'&&<><Text style={s.title}>Statistiques Pronokikz</Text><View style={s.statsRow}><StatBox label="Matchs" value={stats?.total??matches.length}/><StatBox label="Évalués" value={stats?.evaluated??0}/><StatBox label="Bons pronos" value={stats?.correct??0}/></View><View style={s.card}><Text style={s.sectionTitle}>Précision 1N2 globale</Text><Text style={s.bigNumber}>{stats?.accuracy==null?'—':stats.accuracy+'%'}</Text><Text style={s.info}>Calculée sur les matchs terminés disposant d'un pronostic et d'un score final.</Text></View><Text style={s.sectionTitle}>Performance par compétition</Text>{leagueStats.length?leagueStats.map(([name,g])=><View key={name} style={s.card}><View style={s.footerRow}><Text style={s.comboTitle}>{name}</Text><Text style={s.comboProb}>{g.evaluated?Math.round(g.correct/g.evaluated*100)+'%':'—'}</Text></View><Text style={s.info}>{g.correct} bons pronostics sur {g.evaluated} matchs évalués</Text></View>):<Text style={s.info}>Les statistiques par compétition apparaîtront dès que les premiers matchs seront terminés et évalués.</Text>}</>}
    </>}
