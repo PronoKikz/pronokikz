@@ -55,10 +55,6 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
    if(q)add('Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,q);
    else markets.push({...base,market:'Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,odds:1/probability,bookmaker:'Estimation du modèle',estimated:true});
   }
-  if(m.o25!=null){
-   const over=m.o25>=.5,q=over?m.mkOdds?.totals?.over25:m.mkOdds?.totals?.under25;
-   if(q)add(over?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25),q);
-  }
   const picks=markets.filter(p=>p.probability>=minProbability&&p.probability<=.94&&Number.isFinite(p.odds)&&p.odds>1);
   if(picks.length)byMatch.push(picks);
  });
@@ -152,7 +148,7 @@ export default function App() {
   const groupId=nextDate;
   return [{
    groupId,round,matches:dayMatches,
-   safe:buildCombo(dayMatches,3,4,(leagueSeeds[groupId]?.safe??0)+11,0.60),
+   safe:buildCombo(dayMatches,3,4,(leagueSeeds[groupId]?.safe??0)+11,0.72),
    medium:buildCombo(dayMatches,5,7,(leagueSeeds[groupId]?.medium??0)+29,0.45),
    high:buildCombo(dayMatches,33,50,(leagueSeeds[groupId]?.high??0)+47,0.35)
   }];
