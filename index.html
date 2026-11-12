@@ -131,7 +131,9 @@ function diversify(c,n){n=n||6;const pool=c.slice(0,400),out=[];
   out.push(pool.splice(bi,1)[0])}
  return out}
 function targetCands(open,target,min,max,fn){
- const pool=beam(open,max,6,fn||allLegs).filter(x=>x.p>=min&&x.p<=max);
+ const all=beam(open,.65,6,fn||allLegs);
+ const inRange=all.filter(x=>x.p>=min&&x.p<=max);
+ const pool=inRange.length?inRange:all.filter(x=>x.p>0);
  pool.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target));
  return diversify(pool,6);
 }
