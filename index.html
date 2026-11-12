@@ -93,10 +93,13 @@ function chk(m){if(!m.r)return null;const [a,b]=m.r,real=a>b?'1':a==b?'N':'2';
  return{s:a+' : '+b,r:m.fin.includes(real),b:(m.btts>=.5)==(a>0&&b>0),o:m.o25==null?null:(m.o25>=.5)==(a+b>2)}}
 function isOpen(m){if(m.r)return false;if(m.d>TD)return true;if(m.d<TD)return false;const [H,I]=m.h.split(':'),n=new Date();return n.getHours()*60+n.getMinutes()<+H*60+ +I}
 const mk=(m,l,p,kd,sd)=>({m:nm(m)+' ('+(m.lg||'Autres compétitions')+')',k:nm(m),id:m.id,l,p,kd,sd});
-function legsSafe(m){const p=marketAware1x2(m),rank=[['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1]),best=rank[0],next=rank[1],f=dc(m).sort((a,b)=>b[1]-a[1]);
- const strong=(best[0]==='1'||best[0]==='2')&&best[1]>=.62&&best[1]-next[1]>=.15;
- const picks=strong?[[best[0],best[1]],f[0]]:f.slice(0,2);
- return picks.map(([c,v])=>mk(m,c==='1'?m.home+' gagne':c==='2'?m.away+' gagne':(c==='1N'?m.home+' ou nul':c==='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',v,'x2',c))}
+function legsSafe(m){
+ const p=marketAware1x2(m),opts=dc(m).map(([c,v])=>mk(m,(c==='1N'?m.home+' ou nul':c==='N2'?m.away+' ou nul':'pas de nul')+' ('+X(c)+')',v,'x2',c));
+ const btts=m.btts>=.5?['BTTS oui',m.btts,'oui']:['BTTS non',1-m.btts,'non'];
+ opts.push(mk(m,btts[0],btts[1],'btts',btts[2]));
+ if(m.o25!=null){opts.push(mk(m,m.o25>=.5?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25),'o25',m.o25>=.5?'plus':'moins'))}
+ return opts.filter(x=>Number.isFinite(x.p)&&x.p>=.55).sort((a,b)=>b.p-a.p).slice(0,3);
+}
 function legsFun(m){return allLegs(m).sort((a,b)=>b.p-a.p).slice(0,2)}
 function cands(list,mx,safe){const L=list.flatMap(safe?legsSafe:legsFun),nb=new Set(L.map(x=>x.k)).size,out=[],ok=(...a)=>new Set(a.map(x=>x.k)).size==a.length,want=safe?[Math.min(3,nb)]:[2,3];
  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){
@@ -127,9 +130,24 @@ function diversify(c,n){n=n||6;const pool=c.slice(0,400),out=[];
   pool.forEach((x,i)=>{const ov=out.reduce((a,y)=>a+x.l.filter(l=>y.l.some(k=>k.k===l.k)).length,0),sc=ov*10-x.p;if(sc<bs){bs=sc;bi=i}});
   out.push(pool.splice(bi,1)[0])}
  return out}
-function conseilCands(open){const S=open.flatMap(favLegs).filter(x=>x.p>=.2&&x.p<=.5).map(x=>({l:[x],p:x.p})),B=beam(open,.5,3,favLegs).filter(x=>x.p>=.2);
- return diversify([...S,...B].sort((a,b)=>b.p-a.p),6)}
-function safeCands(open){let c=diversify(beam(open,.4,6,legsSafe),6);return c.length?c:diversify(cands(open,1,true),5)}
+function targetCands(open,target,min,max,fn){
+ const pool=beam(open,max,6,fn||allLegs).filter(x=>x.p>=min&&x.p<=max);
+ pool.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target));
+ return diversify(pool,6);
+}
+function conseilCands(open){
+ const one=open.flatMap(favLegs).filter(x=>x.p>=.2&&x.p<=.5).map(x=>({l:[x],p:x.p}));
+ const combos=beam(open,.5,4,allLegs).filter(x=>x.p>=.25&&x.p<=.34);
+ return diversify([...one,...combos].sort((a,b)=>Math.abs(a.p-.2857)-Math.abs(b.p-.2857)),6)
+}
+function safeCands(open){
+ const pool=beam(open,.5,6,legsSafe).filter(x=>x.p>=.30&&x.p<=.50);
+ const ranked=pool.length?pool:beam(open,.65,4,allLegs).filter(x=>x.p>=.30);
+ ranked.sort((a,b)=>b.p-a.p);
+ return diversify(ranked,6)
+}
+function valueCands(open){return targetCands(open,1/6,.14,.20,allLegs)}
+function funCands(open){return targetCands(open,.025,.02,.03,allLegs)}
 function palier(c,thr){const out=[];thr.forEach(t=>{const b=c.find(x=>x.p<=t+1e-9&&!out.includes(x));if(b)out.push(b)});return out}
 function cyc(key,c,cls,ti,note,vide){
  if(!c.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',ti),h('p','ia',vide||'Pas assez de matchs à venir pour ce combiné.')));return}
@@ -187,9 +205,9 @@ function conseils(open){
  const leagues=[...new Set(list.map(m=>m.lg||'Autres compétitions'))].sort((a,b)=>a.localeCompare(b,'fr'));
  const head=h('div','league-title',null,h('div',null,'🏆 Conseils du '+fmt(base)+' au '+fmt(end)),h('div','league-sub',null,list.length+' match'+(list.length>1?'s':'')+' · '+leagues.join(' · ')));
  A.appendChild(head);
- cyc('advice-safe',safeCands(list),'reco','1. Combiné prudent · cote ~2,5','Les sélections les plus prudentes sur les matchs des 3 prochains jours. Vérifie toujours la cote réelle.');
- cyc('advice-tip',conseilCands(list),'tip','2. Mon conseil · cote 2 à 5','Le meilleur compromis entre probabilité et cote selon l’analyse. Vérifie toujours la cote réelle.');
- cyc('advice-fun',diversify(beam(list,.2,5,favLegs),6),'fun','3. Combiné audacieux · cote 5+','Plus risqué, pour tenter une cote plus élevée. À jouer uniquement si la cote réelle convient.');
+ cyc('advice-safe',safeCands(list),'reco','1. Combiné prudent · cote indicative 2 à 3,3','Priorité aux sélections les plus solides : double chance, BTTS ou marché de buts selon le match.');
+ cyc('advice-tip',valueCands(list),'tip','2. Mon conseil · cote indicative 5 à 7','Combinaison construite autour d’une cote 6 : choix cohérents, même sans pari parfaitement safe.');
+ cyc('advice-fun',funCands(list),'fun','3. Combiné audacieux · cote indicative 33 à 50','Long shot construit autour d’une cote 40 : très risqué, mais chaque sélection doit garder une logique footballistique.');
 }
 function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(!S||!S.tot.n){A.appendChild(h('div','card',null,h('div','ttl','🧠 Apprentissage'),h('p','ia','Le modèle enregistre chaque prono avant le match, puis le compare au résultat réel. Rien à afficher tant qu’aucun match enregistré n’est terminé.')));return}
