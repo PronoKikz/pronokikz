@@ -148,7 +148,7 @@ export default function App() {
   const groupId=nextDate;
   return [{
    groupId,round,matches:dayMatches,
-   safe:buildCombo(dayMatches,3,4,(leagueSeeds[groupId]?.safe??0)+11,0.72),
+   safe:buildCombo(dayMatches,2,2.5,(leagueSeeds[groupId]?.safe??0)+11,0.55) || buildCombo(dayMatches,2,2.5,(leagueSeeds[groupId]?.safe??0)+111,0.45) || buildCombo(dayMatches,2,2.5,(leagueSeeds[groupId]?.safe??0)+211,0.35),
    medium:buildCombo(dayMatches,5,7,(leagueSeeds[groupId]?.medium??0)+29,0.45),
    high:buildCombo(dayMatches,33,50,(leagueSeeds[groupId]?.high??0)+47,0.35)
   }];
