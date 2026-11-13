@@ -32,6 +32,8 @@ function buildHistoryEntry(match, goals) {
     d: match.d,
     lg: match.lg,
     p: [match.p1, match.pN, match.p2],
+    modelP: match.raw && [match.raw.p1, match.raw.pN, match.raw.p2].every(Number.isFinite) ? [match.raw.p1, match.raw.pN, match.raw.p2] : null,
+    marketP: Array.isArray(match.mkp) && match.mkp.length === 3 && match.mkp.every(Number.isFinite) ? match.mkp : null,
     b: match.btts,
     o: match.o25 == null ? null : match.o25,
     x: match.x || null,
