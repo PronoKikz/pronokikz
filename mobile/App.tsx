@@ -187,7 +187,7 @@ export default function App() {
    [tier]:(current[groupId]?.[tier]??0)+1
   }}));
  };
- const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
+ const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'|'instinct'|'fun'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
   <Text style={s.comboTitle}>{title}</Text>
   {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE</Text><Text style={s.comboOddsValue}>{combo.odds.toFixed(2).replace('.',',')}</Text></View>
    {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market}</Text><Text style={s.comboOddsLabel}>{p.estimated?'COTE THÉORIQUE (MODÈLE)':'COTE BOOKMAKER'} : {p.odds.toFixed(2).replace('.',',')}</Text><Text style={s.comboOddsLabel}>PROBABILITÉ ESTIMÉE : {pct(p.probability)}</Text></View></View>)}
