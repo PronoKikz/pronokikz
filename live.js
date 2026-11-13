@@ -108,10 +108,10 @@ const toEspnMatch=(event,prefix)=>{
      const score=scoreMatches[scoreMatches.length-1];
      const before=textMed.slice(Math.max(0,hi-70),hi);
      const after=textMed.slice(ai+away.length,ai+away.length+140);
-     const context=before+' '+between+' '+after;
+     const context=between+' '+after;
      const minuteMatches=[...before.matchAll(/(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
      const minute=minuteMatches.length?Number(minuteMatches[minuteMatches.length-1][1]):null;
-     const done=/\b(?:termine|fin du match|full time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties)\b/.test(context)||/\bFT\b/.test(context);
+     const done=/\b(?:termine|fin du match|full time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties)\b/.test(context)||/\bft\b/i.test(context);
      const halftime=/mi temps|half time|halftime|interval/.test(context);
      const suspended=/suspendu|suspended|interrompu/.test(context);
      found={id:String(m.id),status:done?'FINISHED':suspended?'SUSPENDED':halftime?'PAUSED':'IN_PLAY',
