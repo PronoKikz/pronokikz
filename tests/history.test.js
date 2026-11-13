@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
-const { predictedScorerName, scorerHit, buildHistoryEntry } = require('../history');
+const { predictedScorerName, scorerHit, buildHistoryEntry, evaluateAdvice } = require('../history');
 
 assert.equal(predictedScorerName('Kylian Mbappé (13 buts) · 72 % estimés'), 'Kylian Mbappé');
 assert.equal(scorerHit('Kylian Mbappé', [{ scorer: { name: 'Kylian Mbappé' } }]), true);
@@ -21,4 +21,31 @@ assert.equal(entry.bp, 0.72);
 assert.equal(entry.bs, 'openai');
 assert.equal(entry.bh, true);
 assert.equal(entry.t, '2026-11-10T10:00:00.000Z');
-console.log('OK — archivage horodaté et évaluation des buteurs');
+
+const adviceMatches = [
+  { id: 1, r: [2, 0] },
+  { id: 2, r: [1, 1] },
+  { id: 3, r: [0, 2] },
+  { id: 4, r: [1, 1] }
+];
+const won = evaluateAdvice([
+  { id: 1, market: 'Victoire domicile (1)' },
+  { id: 2, market: 'Match nul (N)' }
+], adviceMatches);
+assert.deepEqual(won.states, [true, true]);
+assert.equal(won.status, 'won');
+const lostEarly = evaluateAdvice([
+  { id: 1, market: 'Victoire extérieur (2)' },
+  { id: 4, market: 'Match nul (N)' }
+], adviceMatches);
+assert.equal(lostEarly.status, 'lost');
+const pending = evaluateAdvice([
+  { id: 1, market: 'Victoire domicile (1)' },
+  { id: 99, market: 'Match nul (N)' }
+], adviceMatches);
+assert.deepEqual(pending.states, [true, null]);
+assert.equal(pending.status, 'pending');
+assert.equal(evaluateAdvice([{ id: 1, market: 'Marché inconnu' }], adviceMatches).status, 'pending');
+assert.equal(evaluateAdvice([{ id: 1, market: 'Match nul (N)' }], [{ id: 1, r: [-1, 0] }]).status, 'pending');
+
+console.log('OK — archivage horodaté, buteurs et combinés');
