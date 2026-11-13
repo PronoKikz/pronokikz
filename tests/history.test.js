@@ -1,6 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
-const { predictedScorerName, scorerHit, buildHistoryEntry, evaluateAdvice } = require('../history');
+const { predictedScorerName, scorerHit, buildHistoryEntry } = require('../history');
+const { evaluateAdvice } = require('../mobile/adviceHistory');
 
 assert.equal(predictedScorerName('Kylian Mbappé (13 buts) · 72 % estimés'), 'Kylian Mbappé');
 assert.equal(scorerHit('Kylian Mbappé', [{ scorer: { name: 'Kylian Mbappé' } }]), true);
