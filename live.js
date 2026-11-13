@@ -128,7 +128,7 @@ const toEspnMatch=(event,prefix)=>{
   const liveScore=rawScore&&Number.isFinite(rawScore.home)&&Number.isFinite(rawScore.away)?[rawScore.home,rawScore.away]:null;
   const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null,status=f.status||null;
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
-  const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged;
+  const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged||(!!f.source&&m.liveSource!==f.source);
   if(!changedNow)continue;
   m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();if(f.source)m.liveSource=f.source;
   if(status==='FINISHED'&&liveScore)m.r=liveScore;
