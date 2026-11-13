@@ -33,7 +33,7 @@ const TEAM_NAMES_FR: Record<string,string> = {
  'borussia monchengladbach':'Borussia Mönchengladbach','rb leipzig':'RB Leipzig','eintracht frankfurt':'Eintracht Francfort',
  'internazionale':'Inter Milan','inter':'Inter Milan','inter milan':'Inter Milan','as roma':'AS Rome','roma':'AS Rome',
  'ssc napoli':'Naples','napoli':'Naples','atalanta bc':'Atalanta Bergame','atalanta':'Atalanta Bergame',
- 'fiorentina':'AC Florence','acf fiorentina':'AC Florence','lazio':'Lazio Rome','ss lazio':'Lazio Rome',
+ 'fiorentina':'Fiorentina','acf fiorentina':'Fiorentina','lazio':'Lazio Rome','ss lazio':'Lazio Rome',
  'sporting cp':'Sporting Portugal','sporting clube de portugal':'Sporting Portugal','benfica':'Benfica Lisbonne',
  'sl benfica':'Benfica Lisbonne','fc porto':'FC Porto','ajax':'Ajax Amsterdam','afc ajax':'Ajax Amsterdam',
  'psv':'PSV Eindhoven','psv eindhoven':'PSV Eindhoven','feyenoord':'Feyenoord Rotterdam',
