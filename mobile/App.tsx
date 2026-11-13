@@ -140,7 +140,7 @@ export default function App() {
  useEffect(()=>{let active=true;(async()=>{try{const info=await FileSystem.getInfoAsync(historyFile);if(info.exists){const parsed=JSON.parse(await FileSystem.readAsStringAsync(historyFile));if(Array.isArray(parsed)){historyRef.current=parsed; if(active)setSavedAdvice(parsed);}}}catch(e){/* Historique absent ou illisible : démarrer avec une liste vide. */}finally{if(active)setHistoryLoaded(true);}})();return()=>{active=false;};},[]);
  const saveAdvice=(groupId:string,tier:AdviceTier,combo:Combo|null,source:'auto'|'relance')=>{if(!combo||!combo.picks.length)return;const createdAt=new Date().toISOString(),day=localDayKey();const titles:Record<AdviceTier,string>={safe:'SAFE · COTE 2 À 4',medium:'MON CONSEIL · COTE 5 À 7',high:'AUDACIEUX · COTE 33 À 50',instinct:'MON INSTINCT · LE PARI DU SOIR',fun:'FUN EXTRÊME · COTE 1 000+'};const entry:SavedAdvice={id:createdAt+'-'+tier+'-'+historyRef.current.length,createdAt,day,groupId,tier,title:titles[tier],odds:combo.odds,probability:combo.probability,picks:combo.picks.map(p=>({...p})),source};const next=[entry,...historyRef.current];historyRef.current=next;setSavedAdvice(next);historyWriteRef.current=historyWriteRef.current.then(()=>FileSystem.writeAsStringAsync(historyFile,JSON.stringify(next))).catch(()=>{});};
  const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState(''),[updatedAt,setUpdatedAt]=useState<string|null>(null),[apiOnline,setApiOnline]=useState(false),[clockNow,setClockNow]=useState(Date.now());
- const load=useCallback(async()=>{try{setError('');const response=await fetch(DATA_URL+'?t='+Date.now());if(!response.ok)throw new Error('Données indisponibles ('+response.status+').');const data=await response.json();const list=Array.isArray(data.matches)?data.matches:[];setMatches(list);setUpdatedAt(data.updatedAt||null);const finished=list.filter((m:Match)=>Array.isArray(m.r)&&m.r.length===2);const upcoming=list.filter((m:Match)=>!Array.isArray(m.r)||m.r.length!==2);let correct=0,evaluated=0;for(const m of finished){if(m.p1==null||m.pN==null||m.p2==null)continue;const predicted=m.p1>=m.pN&&m.p1>=m.p2?'1':m.pN>=m.p1&&m.pN>=m.p2?'N':'2';const actual=m.r![0]>m.r![1]?'1':m.r![0]===m.r![1]?'N':'2';evaluated++;if(predicted===actual)correct++;}setStats({total:list.length,upcoming:upcoming.length,finished:finished.length,evaluated,correct,accuracy:evaluated?Math.round(correct/evaluated*100):null});setApiOnline(true);}catch(e:any){setApiOnline(false);setError(e?.message||'Impossible de charger les données Pronokikz.');}finally{setLoading(false);setRefreshing(false);}},[]);
+ const load=useCallback(async()=>{try{setError('');const response=await fetch(DATA_URL+'?t='+Date.now());if(!response.ok)throw new Error('Données indisponibles ('+response.status+').');const data=await response.json();const list=Array.isArray(data.matches)?data.matches:[];setMatches(list);setUpdatedAt(data.updatedAt||null);const finished=list.filter((m:Match)=>Array.isArray(m.r)&&m.r.length===2);const upcoming=list.filter((m:Match)=>!Array.isArray(m.r)||m.r.length!==2);let correct=0,evaluated=0;for(const m of finished){const hit=predictionCorrect(m);if(hit===null)continue;evaluated++;if(hit)correct++;}setStats({total:list.length,upcoming:upcoming.length,finished:finished.length,evaluated,correct,accuracy:evaluated?Math.round(correct/evaluated*100):null});setApiOnline(true);}catch(e:any){setApiOnline(false);setError(e?.message||'Impossible de charger les données Pronokikz.');}finally{setLoading(false);setRefreshing(false);}},[]);
  useEffect(()=>{load();},[load]);
  useEffect(()=>{const refresh=setInterval(()=>load(),30000);const clock=setInterval(()=>setClockNow(Date.now()),1000);return()=>{clearInterval(refresh);clearInterval(clock);};},[load]);
  const liveMatches=useMemo(()=>matches.filter(m=>['IN_PLAY','PAUSED','SUSPENDED'].includes(String(m.liveStatus||''))).sort((a,b)=>(a.d||'').concat(a.h||'').localeCompare((b.d||'').concat(b.h||''))),[matches]);
@@ -149,11 +149,8 @@ export default function App() {
  const upcoming=useMemo(()=>matches.filter(m=>{if(m.r||!m.d||!m.h)return false;const kickoff=new Date(m.d+'T'+m.h+':00');return !Number.isNaN(kickoff.getTime())&&kickoff.getTime()>Date.now();}).sort((a,b)=>(a.d||'').concat(a.h||'').localeCompare((b.d||'').concat(b.h||''))),[matches]);
  const finished=useMemo(()=>matches.filter(m=>Array.isArray(m.r)&&m.r.length===2).sort((a,b)=>((b.d||'')+(b.h||'')).localeCompare((a.d||'')+(a.h||''))),[matches]);
  const visibleResults=useMemo(()=>finished.filter(m=>{
-  const [p1,pN,p2]=effective1x2(m);
-  const predicted=m.p1==null||m.pN==null||m.p2==null?null:p1>=pN&&p1>=p2?'1':pN>=p1&&pN>=p2?'N':'2';
-  const actual=m.r![0]>m.r![1]?'1':m.r![0]===m.r![1]?'N':'2';
-  const correct=predicted!==null&&predicted===actual;
-  return (resultLeagueFilter==='Toutes'||m.lg===resultLeagueFilter)&&(resultFilter==='Tous'||(resultFilter==='Gagnés'?correct:predicted!==null&&!correct));
+  const hit=predictionCorrect(m);
+  return (resultLeagueFilter==='Toutes'||m.lg===resultLeagueFilter)&&(resultFilter==='Tous'||(resultFilter==='Gagnés'?hit===true:hit===false));
  }),[finished,resultFilter,resultLeagueFilter]);
  const resultGroups=useMemo(()=>{
   const groups:Record<string,Match[]>={};
@@ -164,11 +161,9 @@ export default function App() {
  const leagueStats=useMemo(()=>{
   const groups:Record<string,{evaluated:number;correct:number}>={};
   matches.forEach(m=>{
-   if(!m.lg||!m.r||m.r.length!==2||m.p1==null||m.pN==null||m.p2==null)return;
+   const hit=predictionCorrect(m);if(!m.lg||hit===null)return;
    const g=groups[m.lg]||(groups[m.lg]={evaluated:0,correct:0});
-   const predicted=m.p1>=m.pN&&m.p1>=m.p2?'1':m.pN>=m.p1&&m.pN>=m.p2?'N':'2';
-   const actual=m.r[0]>m.r[1]?'1':m.r[0]===m.r[1]?'N':'2';
-   g.evaluated++;if(predicted===actual)g.correct++;
+   g.evaluated++;if(hit)g.correct++;
   });
   return Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0],'fr'));
  },[matches]);
