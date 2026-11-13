@@ -79,18 +79,18 @@ const toEspnMatch=(event,prefix)=>{
   'belgium':'Belgique','italy':'Italie','croatia':'Croatie','czechia':'République Tchèque',
   'france':'France','spain':'Espagne','england':'Angleterre','malta':'Malte'
  };
- const medNorm=s=>String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const medNorm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s'-]/g,' ').replace(/\s+/g,' ').trim();
  const medTeam=s=>medNorm(medAliases[String(s||'').toLowerCase()]||s);
  try{
   const response=await fetch('https://www.matchendirect.fr/live-score/',{headers:{'User-Agent':'Mozilla/5.0 (compatible; PronokikzLive/1.0)','Accept':'text/html'}});
   if(!response.ok)throw new Error('HTTP '+response.status);
   const html=await response.text();
-  const visible=html.replace(/<script[\\s\\S]*?<\\/script>/gi,' ')
-   .replace(/<style[\\s\\S]*?<\\/style>/gi,' ').replace(/<[^>]+>/g,' ')
+  const visible=html.replace(/<script[\s\S]*?<\/script>/gi,' ')
+   .replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ')
    .replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&')
    .replace(/&eacute;/gi,'é').replace(/&egrave;/gi,'è').replace(/&ecirc;/gi,'ê')
    .replace(/&agrave;/gi,'à').replace(/&ccedil;/gi,'ç').replace(/&#39;|&apos;/gi,"'")
-   .replace(/&#(\\d+);/g,(_,n)=>String.fromCharCode(Number(n)));
+   .replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n)));
   const textMed=medNorm(visible);
   let medCount=0;
   for(const m of matches){
@@ -103,13 +103,13 @@ const toEspnMatch=(event,prefix)=>{
     const ai=textMed.indexOf(away,hi+home.length);
     if(ai<0){cursor=hi+1;continue}
     const between=textMed.slice(hi+home.length,ai);
-    const scoreMatches=[...between.matchAll(/(?:^|\\s)(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})(?=\\s|$)/g)];
+    const scoreMatches=[...between.matchAll(/(?:^|\s)(\d{1,2})\s*-\s*(\d{1,2})(?=\s|$)/g)];
     if(scoreMatches.length&&ai-hi<180){
      const score=scoreMatches[scoreMatches.length-1];
      const before=textMed.slice(Math.max(0,hi-45),hi);
-     const minuteMatches=[...before.matchAll(/(\\d{1,3})(?:\\s*\\+\\s*\\d+)?\\s*['’′]/g)];
+     const minuteMatches=[...before.matchAll(/(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
      const minute=minuteMatches.length?Number(minuteMatches[minuteMatches.length-1][1]):null;
-     found={id:String(m.id),status:/mi temps|mi temps|half time/.test(before+' '+between)?'PAUSED':'IN_PLAY',
+     found={id:String(m.id),status:/mi temps|half time/.test(before+' '+between)?'PAUSED':'IN_PLAY',
       minute,score:{home:Number(score[1]),away:Number(score[2])}};
      break;
     }
