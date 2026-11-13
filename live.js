@@ -60,6 +60,65 @@ const toEspnMatch=(event,prefix)=>{
   const m=ids.get(String(f.id));if(!m)continue;
   fetched.push({id:f.id,status:f.status,minute:f.minute,injuryTime:f.injuryTime,score:{fullTime:f.liveScore}});
  }
+
+ // MatchEnDirect : source prioritaire pour les rencontres visibles sur son livescore.
+ // On ne remplace une donnée existante que si les deux équipes et le score sont reconnus.
+ const medAliases={
+  'andorra':'Andorre','netherlands':'Pays-Bas','north macedonia':'Macédoine du Nord',
+  'faroe islands':'Îles Féroé','azerbaijan':'Azerbaïdjan','iceland':'Islande',
+  'slovenia':'Slovénie','switzerland':'Suisse','germany':'Allemagne','serbia':'Serbie',
+  'slovakia':'Slovaquie','bulgaria':'Bulgarie','estonia':'Estonie','luxembourg':'Luxembourg',
+  'liechtenstein':'Liechtenstein','gibraltar':'Gibraltar','moldova':'Moldavie',
+  'kazakhstan':'Kazakhstan','scotland':'Écosse','israel':'Israël','kosovo':'Kosovo',
+  'georgia':'Géorgie','hungary':'Hongrie','norway':'Norvège','wales':'Pays de Galles',
+  'austria':'Autriche','republic of ireland':'Irlande','northern ireland':'Irlande du Nord',
+  'ukraine':'Ukraine','portugal':'Portugal','denmark':'Danemark','romania':'Roumanie',
+  'poland':'Pologne','sweden':'Suède','bosnia-herzegovina':'Bosnie-Herzégovine',
+  'cyprus':'Chypre','montenegro':'Monténégro','latvia':'Lettonie','armenia':'Arménie',
+  'belarus':'Bélarus','albania':'Albanie','finland':'Finlande','san marino':'Saint-Marin',
+  'belgium':'Belgique','italy':'Italie','croatia':'Croatie','czechia':'République Tchèque',
+  'france':'France','spain':'Espagne','england':'Angleterre','malta':'Malte'
+ };
+ const medNorm=s=>String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const medTeam=s=>medNorm(medAliases[String(s||'').toLowerCase()]||s);
+ try{
+  const response=await fetch('https://www.matchendirect.fr/live-score/',{headers:{'User-Agent':'Mozilla/5.0 (compatible; PronokikzLive/1.0)','Accept':'text/html'}});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const html=await response.text();
+  const visible=html.replace(/<script[\\s\\S]*?<\\/script>/gi,' ')
+   .replace(/<style[\\s\\S]*?<\\/style>/gi,' ').replace(/<[^>]+>/g,' ')
+   .replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&')
+   .replace(/&eacute;/gi,'é').replace(/&egrave;/gi,'è').replace(/&ecirc;/gi,'ê')
+   .replace(/&agrave;/gi,'à').replace(/&ccedil;/gi,'ç').replace(/&#39;|&apos;/gi,"'")
+   .replace(/&#(\\d+);/g,(_,n)=>String.fromCharCode(Number(n)));
+  const textMed=medNorm(visible);
+  let medCount=0;
+  for(const m of matches){
+   if(!m||!m.home||!m.away)continue;
+   const home=medTeam(m.home),away=medTeam(m.away);
+   if(!home||!away)continue;
+   let cursor=0,found=null;
+   while(cursor<textMed.length){
+    const hi=textMed.indexOf(home,cursor);if(hi<0)break;
+    const ai=textMed.indexOf(away,hi+home.length);
+    if(ai<0){cursor=hi+1;continue}
+    const between=textMed.slice(hi+home.length,ai);
+    const scoreMatches=[...between.matchAll(/(?:^|\\s)(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})(?=\\s|$)/g)];
+    if(scoreMatches.length&&ai-hi<180){
+     const score=scoreMatches[scoreMatches.length-1];
+     const before=textMed.slice(Math.max(0,hi-45),hi);
+     const minuteMatches=[...before.matchAll(/(\\d{1,3})(?:\\s*\\+\\s*\\d+)?\\s*['’′]/g)];
+     const minute=minuteMatches.length?Number(minuteMatches[minuteMatches.length-1][1]):null;
+     found={id:String(m.id),status:/mi temps|mi temps|half time/.test(before+' '+between)?'PAUSED':'IN_PLAY',
+      minute,score:{home:Number(score[1]),away:Number(score[2])}};
+     break;
+    }
+    cursor=hi+1;
+   }
+   if(found){fetched.push({id:found.id,status:found.status,minute:found.minute,score:{fullTime:found.score},source:'MatchEnDirect'});medCount++}
+  }
+  console.log('MatchEnDirect : '+medCount+' matchs rapprochés sur '+matches.length+' matchs du calendrier.');
+ }catch(e){console.log('MatchEnDirect indisponible : '+e.message+' (sources de secours conservées)')}
  let changed=0,tracked=0;
  for(const f of fetched){
   const m=ids.get(String(f.id));if(!m)continue;
@@ -71,7 +130,7 @@ const toEspnMatch=(event,prefix)=>{
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
   const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged;
   if(!changedNow)continue;
-  m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();
+  m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();if(f.source)m.liveSource=f.source;
   if(status==='FINISHED'&&liveScore)m.r=liveScore;
   changed++;
  }
