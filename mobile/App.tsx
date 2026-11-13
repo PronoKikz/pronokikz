@@ -26,7 +26,8 @@ type Stats = { total: number; upcoming: number; finished: number; evaluated: num
 const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const localDayKey = () => { const d=new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); };
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
-const effective1x2 = (m: Match): [number,number,number] => { const model=[m.p1??0,m.pN??0,m.p2??0]; if(m.mkp?.length===3)return model; const q=m.mkOdds?.h2h,prices=[q?.home?.price,q?.draw?.price,q?.away?.price]; if(!prices.every(x=>Number.isFinite(x)&&x!>1))return model; const raw=prices.map(x=>1/(x as number)),sum=raw.reduce((a,b)=>a+b,0); if(!sum)return model; const market=raw.map(x=>x/sum); return model.map((p,i)=>0.15*p+0.85*market[i]) as [number,number,number]; };
+const hasFreshMarketOdds = (m: Match, maxAgeHours = 24): boolean => { const stamp=m.mkOddsAt?Date.parse(m.mkOddsAt):NaN; const age=Date.now()-stamp; return Number.isFinite(stamp)&&age>=-5*60*1000&&age<=maxAgeHours*60*60*1000; };
+const effective1x2 = (m: Match): [number,number,number] => { const model=[m.p1??0,m.pN??0,m.p2??0]; if(m.mkp?.length===3)return model; const q=hasFreshMarketOdds(m)?m.mkOdds?.h2h:undefined,prices=[q?.home?.price,q?.draw?.price,q?.away?.price]; if(!prices.every(x=>Number.isFinite(x)&&x!>1))return model; const raw=prices.map(x=>1/(x as number)),sum=raw.reduce((a,b)=>a+b,0); if(!sum)return model; const market=raw.map(x=>x/sum); return model.map((p,i)=>0.15*p+0.85*market[i]) as [number,number,number]; };
 const prediction = (m: Match) => { if (m.p1 == null || m.pN == null || m.p2 == null) return 'Analyse indisponible'; const [p1,pN,p2]=effective1x2(m),best = Math.max(p1,pN,p2); return best === p1 ? '1 — domicile' : best === pN ? 'N — nul' : '2 — extérieur'; };
 const normalizeSelection = (value?: string) => String(value || '').toUpperCase().replace(/X/g,'N').replace(/[\s/|+_-]/g,'');
 const predictionCorrect = (m: Match): boolean | null => {
@@ -41,21 +42,21 @@ const predictionCorrect = (m: Match): boolean | null => {
 };
 const formatSelection = (value?: string) => value ? value.replace(/^(1N|N2|12)$/, x => x.split('').join('/')) : '';
 const displayedPrediction = (m: Match) => formatSelection(m.fin) || prediction(m);
-type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number; bookmaker: string; estimated?: boolean };
+type ComboPick = { id: string; match: string; league: string; kickoff: string; market: string; probability: number; odds: number; bookmaker: string; oddsAt?: string; estimated?: boolean };
 type Combo = { picks: ComboPick[]; odds: number; probability: number };
 type AdviceTier = 'safe'|'medium'|'high'|'instinct'|'fun';
 type SavedAdvice = { id:string; createdAt:string; day:string; groupId:string; tier:AdviceTier; title:string; odds:number; probability:number; picks:ComboPick[]; source:'auto'|'relance' };
 const buildCombo = (matches: Match[], min: number, max: number, seed: number, minProbability = 0.35, allowEstimated = true): Combo | null => {
  const byMatch: ComboPick[][] = [];
  matches.forEach(m => {
-  const [p1,pN,p2]=effective1x2(m),base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
+  const [p1,pN,p2]=effective1x2(m),fresh=hasFreshMarketOdds(m),base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
   const markets: ComboPick[] = [];
-  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{if(q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker})};
+  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{if(fresh&&q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt})};
   add('Victoire domicile (1)',p1,m.mkOdds?.h2h?.home);
   add('Match nul (N)',pN,m.mkOdds?.h2h?.draw);
   add('Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away);
   if(m.btts!=null&&m.btts>0&&m.btts<1){
-   const yes=m.btts>=.5,probability=yes?m.btts:1-m.btts,q=yes?m.mkOdds?.btts?.yes:m.mkOdds?.btts?.no;
+   const yes=m.btts>=.5,probability=yes?m.btts:1-m.btts,q=fresh?(yes?m.mkOdds?.btts?.yes:m.mkOdds?.btts?.no):undefined;
    if(q)add('Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,q);
    else if(allowEstimated)markets.push({...base,market:'Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,odds:1/probability,bookmaker:'Estimation du modèle',estimated:true});
   }
@@ -88,7 +89,7 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
 const buildInstinctPick = (matches: Match[], seed: number): Combo | null => {
  const candidates: ComboPick[] = [];
  matches.forEach(m => {
-  const [p1,pN,p2]=effective1x2(m),q=m.mkOdds?.h2h;
+  const [p1,pN,p2]=effective1x2(m),q=hasFreshMarketOdds(m)?m.mkOdds?.h2h:undefined;
   const base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
   const options=[
    {market:'Victoire domicile (1)',probability:p1,quote:q?.home},
@@ -97,7 +98,7 @@ const buildInstinctPick = (matches: Match[], seed: number): Combo | null => {
   ];
   options.forEach(o=>{
    if(o.quote&&Number.isFinite(o.quote.price)&&o.quote.price>=1.6&&o.quote.price<=8&&o.probability>=0.35&&o.probability<=0.85){
-    candidates.push({...base,market:o.market,probability:o.probability,odds:o.quote.price,bookmaker:o.quote.bookmaker});
+    candidates.push({...base,market:o.market,probability:o.probability,odds:o.quote.price,bookmaker:o.quote.bookmaker,oddsAt:m.mkOddsAt});
    }
   });
  });
@@ -200,7 +201,7 @@ export default function App() {
  const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'|'instinct'|'fun'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
   <Text style={s.comboTitle}>{title}</Text>
   {combo?<><View style={s.comboOdds}><Text style={s.comboOddsLabel}>COTE</Text><Text style={s.comboOddsValue}>{combo.odds.toFixed(2).replace('.',',')}</Text></View>
-   {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market}</Text><Text style={s.comboOddsLabel}>{p.estimated?'COTE THÉORIQUE (MODÈLE)':'COTE BOOKMAKER'} : {p.odds.toFixed(2).replace('.',',')}</Text><Text style={s.comboOddsLabel}>PROBABILITÉ ESTIMÉE : {pct(p.probability)}</Text></View></View>)}
+   {combo.picks.map((p,i)=><View key={p.id+':'+p.market} style={s.comboPick}><View style={{flex:1}}><Text style={s.comboMatch}>{p.match}</Text><Text style={s.comboDate}>📅 {p.kickoff}</Text><Text style={[s.comboMarket,{color:competitionAccent(p.league)}]}>{p.market}</Text><Text style={s.comboOddsLabel}>{p.estimated?'COTE THÉORIQUE (MODÈLE)':'COTE BOOKMAKER'} : {p.odds.toFixed(2).replace('.',',')}</Text>{!!p.oddsAt&&<Text style={s.comboOddsLabel}>COTE RELEVÉE : {new Date(p.oddsAt).toLocaleString('fr-FR')}</Text>}<Text style={s.comboOddsLabel}>PROBABILITÉ ESTIMÉE : {pct(p.probability)}</Text></View></View>)}
   </>:<Text style={s.info}>Pas assez de matchs ou de cotes disponibles pour ce conseil.</Text>}
   <Pressable style={s.rerollButton} onPress={()=>rerollLeagueCombo(groupId,tier)}><Text style={s.rerollText}>↻ Relancer ce conseil</Text></Pressable>
  </View>;
