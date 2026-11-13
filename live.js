@@ -106,10 +106,15 @@ const toEspnMatch=(event,prefix)=>{
     const scoreMatches=[...between.matchAll(/(?:^|\s)(\d{1,2})\s*-\s*(\d{1,2})(?=\s|$)/g)];
     if(scoreMatches.length&&ai-hi<180){
      const score=scoreMatches[scoreMatches.length-1];
-     const before=textMed.slice(Math.max(0,hi-45),hi);
+     const before=textMed.slice(Math.max(0,hi-70),hi);
+     const after=textMed.slice(ai+away.length,ai+away.length+140);
+     const context=before+' '+between+' '+after;
      const minuteMatches=[...before.matchAll(/(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
      const minute=minuteMatches.length?Number(minuteMatches[minuteMatches.length-1][1]):null;
-     found={id:String(m.id),status:/mi temps|half time/.test(before+' '+between)?'PAUSED':'IN_PLAY',
+     const done=/\b(?:termine|fin du match|full time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties)\b/.test(context)||/\bFT\b/.test(context);
+     const halftime=/mi temps|half time|halftime|interval/.test(context);
+     const suspended=/suspendu|suspended|interrompu/.test(context);
+     found={id:String(m.id),status:done?'FINISHED':suspended?'SUSPENDED':halftime?'PAUSED':'IN_PLAY',
       minute,score:{home:Number(score[1]),away:Number(score[2])}};
      break;
     }
