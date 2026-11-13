@@ -13,11 +13,14 @@ assert.equal(scorerHit('Kylian Mbappé', [{ assist: { name: 'Joueur' } }]), null
 const entry = buildHistoryEntry({
   id: 123, d: '2026-11-10', lg: 'Ligue 1',
   p1: 0.5, pN: 0.25, p2: 0.25, btts: 0.6, o25: 0.55,
+  raw: { p1: 0.6, pN: 0.2, p2: 0.2 }, mkp: [0.45, 0.3, 0.25],
   x: [1.7, 1.1], q: [0.48, 0.27, 0.25], r: [2, 1],
   pt: '2026-11-10T10:00:00.000Z',
   bt: 'Kylian Mbappé (13 buts) · 72 % estimés', btp: 0.72, btSource: 'openai'
 }, [{ scorer: { name: 'Kylian Mbappé' } }]);
 assert.equal(entry.bt, 'Kylian Mbappé');
+assert.deepEqual(entry.modelP, [0.6, 0.2, 0.2]);
+assert.deepEqual(entry.marketP, [0.45, 0.3, 0.25]);
 assert.equal(entry.bp, 0.72);
 assert.equal(entry.bs, 'openai');
 assert.equal(entry.bh, true);
