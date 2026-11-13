@@ -15,13 +15,17 @@ const day=(n)=>{const d=new Date(Date.now()+n*864e5);return new Intl.DateTimeFor
  const fetched=results.flat();let changed=0;
  for(const f of fetched){
   const m=ids.get(String(f.id));if(!m)continue;
+  if(!['IN_PLAY','PAUSED','FINISHED','SUSPENDED','POSTPONED','CANCELLED','AWARDED'].includes(f.status))continue;
   const score=f.score&&f.score.fullTime;
   const liveScore=score&&Number.isFinite(score.home)&&Number.isFinite(score.away)?[score.home,score.away]:null;
-  const next={...m,liveStatus:f.status||null,liveMinute:Number.isFinite(f.minute)?f.minute:null,liveAdded:Number.isFinite(f.injuryTime)?f.injuryTime:null,liveScore,liveUpdatedAt:new Date().toISOString()};
-  if(f.status==='FINISHED'&&liveScore)next.r=liveScore;
-  Object.assign(m,next);changed++;
+  const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null,status=f.status||null;
+  const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
+  const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged;
+  if(!changedNow)continue;
+  m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();
+  if(status==='FINISHED'&&liveScore)m.r=liveScore;
+  changed++;
  }
- data.liveUpdatedAt=new Date().toISOString();
- fs.writeFileSync(file,JSON.stringify(data));
+ if(changed>0)fs.writeFileSync(file,JSON.stringify(data));
  console.log('Suivi live actualisé : '+changed+' matchs suivis, '+fetched.length+' rencontres reçues. Statuts IN_PLAY/PAUSED et minute fournis par Football-Data.');
 })().catch(e=>{console.error(e);process.exit(1)});
