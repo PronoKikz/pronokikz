@@ -29,25 +29,16 @@ const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const localDayKey = () => { const d=new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); };
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 const TEAM_NAMES_FR: Record<string,string> = {
- 'bayern munchen':'Bayern Munich','fc bayern munchen':'Bayern Munich','borussia dortmund':'Borussia Dortmund',
- 'borussia monchengladbach':'Borussia Mönchengladbach','rb leipzig':'RB Leipzig','eintracht frankfurt':'Eintracht Francfort',
- 'internazionale':'Inter Milan','inter':'Inter Milan','inter milan':'Inter Milan','as roma':'AS Rome','roma':'AS Rome',
- 'ssc napoli':'Naples','napoli':'Naples','atalanta bc':'Atalanta Bergame','atalanta':'Atalanta Bergame',
- 'fiorentina':'Fiorentina','acf fiorentina':'Fiorentina','lazio':'Lazio Rome','ss lazio':'Lazio Rome',
- 'sporting cp':'Sporting Portugal','sporting clube de portugal':'Sporting Portugal','benfica':'Benfica Lisbonne',
- 'sl benfica':'Benfica Lisbonne','fc porto':'FC Porto','ajax':'Ajax Amsterdam','afc ajax':'Ajax Amsterdam',
- 'psv':'PSV Eindhoven','psv eindhoven':'PSV Eindhoven','feyenoord':'Feyenoord Rotterdam',
- 'atletico madrid':'Atlético Madrid','atletico de madrid':'Atlético Madrid','athletic club':'Athletic Bilbao',
- 'athletic bilbao':'Athletic Bilbao','real betis':'Betis Séville','real sociedad':'Real Sociedad',
- 'sevilla fc':'FC Séville','sevilla':'FC Séville','valencia cf':'Valence CF',
- 'wolverhampton wanderers':'Wolverhampton','wolves':'Wolverhampton','tottenham hotspur':'Tottenham',
- 'west ham united':'West Ham','brighton & hove albion':'Brighton','nottingham forest':'Nottingham Forest',
- 'newcastle united':'Newcastle United','leicester city':'Leicester City','leeds united':'Leeds United',
- 'crystal palace':'Crystal Palace','aston villa':'Aston Villa','manchester united':'Manchester United',
- 'manchester city':'Manchester City','paris saint-germain':'Paris Saint-Germain','paris sg':'Paris Saint-Germain',
- 'psg':'Paris Saint-Germain','olympique de marseille':'Olympique de Marseille','olympique lyonnais':'Olympique Lyonnais',
- 'olympique lyon':'Olympique Lyonnais','as monaco':'AS Monaco','lille osc':'LOSC Lille','losc':'LOSC Lille',
- 'rc lens':'RC Lens','rc strasbourg':'RC Strasbourg','stade rennais':'Stade Rennais','rennes':'Stade Rennais'
+ 'bayern munchen':'Bayern Munich','fc bayern munchen':'Bayern Munich',
+ 'eintracht frankfurt':'Eintracht Francfort',
+ 'internazionale':'Inter Milan','inter':'Inter Milan','inter milan':'Inter Milan',
+ 'ssc napoli':'Naples','napoli':'Naples',
+ 'atalanta bc':'Atalanta Bergame',
+ 'ss lazio':'Lazio Rome','lazio':'Lazio Rome',
+ 'atletico de madrid':'Atlético Madrid','atletico madrid':'Atlético Madrid',
+ 'athletic club':'Athletic Bilbao',
+ 'real betis':'Betis Séville',
+ 'sevilla fc':'FC Séville','valencia cf':'Valence CF'
 };
 const normalizeTeamName = (name:string) => name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/\\s+/g,' ').trim();
 const displayTeamName = (name?:string) => { if(!name)return name||''; return TEAM_NAMES_FR[normalizeTeamName(name)]||name; };
