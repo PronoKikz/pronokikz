@@ -3,6 +3,12 @@ concurrency:
   group: pronokikz-data-update
   cancel-in-progress: false
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'live.js'
+      - '.github/workflows/live-scores.yml'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
