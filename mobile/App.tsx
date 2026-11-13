@@ -29,16 +29,33 @@ const pct = (n?: number) => n == null ? '—' : Math.round(n * 100) + '%';
 const localDayKey = () => { const d=new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); };
 const dateLabel = (d?: string, h?: string) => { if (!d) return 'Date à confirmer'; const x = new Date(d + 'T' + (h || '12:00') + ':00'); return Number.isNaN(x.getTime()) ? d : x.toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 const TEAM_NAMES_FR: Record<string,string> = {
- 'bayern munchen':'Bayern Munich','fc bayern munchen':'Bayern Munich',
- 'eintracht frankfurt':'Eintracht Francfort',
- 'internazionale':'Inter Milan','inter':'Inter Milan','inter milan':'Inter Milan',
- 'ssc napoli':'Naples','napoli':'Naples',
- 'atalanta bc':'Atalanta Bergame',
- 'ss lazio':'Lazio Rome','lazio':'Lazio Rome',
- 'atletico de madrid':'Atlético Madrid','atletico madrid':'Atlético Madrid',
- 'athletic club':'Athletic Bilbao',
- 'real betis':'Betis Séville',
- 'sevilla fc':'FC Séville','valencia cf':'Valence CF'
+ // Clubs : ne franciser que les noms ayant un équivalent français clair.
+ '1. fc koln':'FC Cologne','atleti':'Atlético Madrid','athletic':'Athletic Bilbao',
+ 'bayern':'Bayern Munich','dortmund':'Borussia Dortmund','frankfurt':'Eintracht Francfort',
+ 'bremen':'Werder Brême','brighton hove':'Brighton','celta':'Celta Vigo',
+ 'internazionale':'Inter Milan','inter':'Inter Milan','milan':'AC Milan',
+ 'napoli':'Naples','leverkusen':'Bayer Leverkusen','man city':'Manchester City',
+ 'man united':'Manchester United','newcastle':'Newcastle United',
+ 'nottingham':'Nottingham Forest','lazio':'Lazio Rome','roma':'AS Rome',
+ 'olympique lyon':'Olympique Lyonnais','psg':'Paris Saint-Germain',
+ 'valencia':'Valence CF','stuttgart':'VfB Stuttgart','sassuolo':'US Sassuolo',
+ 'schalke':'Schalke 04','santander':'Racing Santander',
+ // Pays et sélections nationales.
+ 'albania':'Albanie','andorra':'Andorre','armenia':'Arménie','austria':'Autriche',
+ 'azerbaijan':'Azerbaïdjan','belarus':'Biélorussie','belgium':'Belgique',
+ 'bosnia-herzegovina':'Bosnie-Herzégovine','bulgaria':'Bulgarie','croatia':'Croatie',
+ 'cyprus':'Chypre','czechia':'Tchéquie','denmark':'Danemark','england':'Angleterre',
+ 'estonia':'Estonie','faroe islands':'Îles Féroé','finland':'Finlande',
+ 'georgia':'Géorgie','germany':'Allemagne','greece':'Grèce','hungary':'Hongrie',
+ 'iceland':'Islande','israel':'Israël','italy':'Italie','kazakhstan':'Kazakhstan',
+ 'latvia':'Lettonie','liechtenstein':'Liechtenstein','lithuania':'Lituanie',
+ 'luxembourg':'Luxembourg','malta':'Malte','moldova':'Moldavie',
+ 'montenegro':'Monténégro','netherlands':'Pays-Bas','north macedonia':'Macédoine du Nord',
+ 'northern ireland':'Irlande du Nord','norway':'Norvège','poland':'Pologne',
+ 'republic of ireland':'Irlande','romania':'Roumanie','san marino':'Saint-Marin',
+ 'scotland':'Écosse','serbia':'Serbie','slovakia':'Slovaquie','slovenia':'Slovénie',
+ 'spain':'Espagne','sweden':'Suède','switzerland':'Suisse','turkiye':'Turquie',
+ 'ukraine':'Ukraine','wales':'Pays de Galles'
 };
 const normalizeTeamName = (name:string) => name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/\\s+/g,' ').trim();
 const displayTeamName = (name?:string) => { if(!name)return name||''; return TEAM_NAMES_FR[normalizeTeamName(name)]||name; };
