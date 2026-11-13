@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as FileSystem from 'expo-file-system/legacy';
-const { evaluateAdvice } = require('../history');
+const { evaluateAdvice } = require('./adviceHistory');
 import { ActivityIndicator, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 type ThemeName = 'dark' | 'light' | 'pink' | 'football' | 'system';
