@@ -108,11 +108,13 @@ const toEspnMatch=(event,prefix)=>{
      const score=scoreMatches[scoreMatches.length-1];
      const before=textMed.slice(Math.max(0,hi-70),hi);
      const after=textMed.slice(ai+away.length,ai+away.length+140);
-     const context=between+' '+after;
-     const minuteMatches=[...before.matchAll(/(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
+     // Le libellé d'état MatchEnDirect peut apparaître avant les équipes.
+     // On inspecte donc aussi le texte immédiatement précédent le nom du domicile.
+     const context=(before.slice(-90)+' '+between+' '+after).replace(/\\s+/g,' ');
+     const minuteMatches=[...before.matchAll(/(\\d{1,3})(?:\\s*\\+\\s*\\d+)?\\s*'/g)];
      const minute=minuteMatches.length?Number(minuteMatches[minuteMatches.length-1][1]):null;
-     const done=/\b(?:termine|fin du match|full time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties)\b/.test(context)||/\bft\b/i.test(context);
-     const halftime=/mi temps|half time|halftime|interval/.test(context);
+     const done=/\\b(?:termine|terminee|fin du match|match fini|full.?time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties|penalty shoot.?out)\\b/.test(context)||/\\bft\\b/i.test(context);
+     const halftime=/mi.?temps|half.?time|halftime|interval/.test(context);
      const suspended=/suspendu|suspended|interrompu/.test(context);
      found={id:String(m.id),status:done?'FINISHED':suspended?'SUSPENDED':halftime?'PAUSED':'IN_PLAY',
       minute,score:{home:Number(score[1]),away:Number(score[2])}};
