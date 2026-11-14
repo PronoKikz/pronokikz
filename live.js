@@ -154,6 +154,15 @@ const toEspnMatch=(event,prefix)=>{
   if(status==='FINISHED'&&liveScore)m.r=liveScore;
   changed++;
  }
- if(changed>0)fs.writeFileSync(file,JSON.stringify(data));
+ if(changed>0){
+  fs.writeFileSync(file,JSON.stringify(data));
+  // L'application charge data.js : synchronise aussi les statuts live dans M.
+  const jsFile='data.js';
+  if(fs.existsSync(jsFile)){
+   let js=fs.readFileSync(jsFile,'utf8');
+   const updated=js.replace(/const M=[\\s\\S]*?;\\s*$/, 'const M='+JSON.stringify(matches)+';');
+   if(updated!==js)fs.writeFileSync(jsFile,updated);
+  }
+ }
  console.log('Suivi live : '+tracked+' matchs suivis ('+fetched.length+' rencontres Football-Data/ESPN reçues, dont '+espnFetched+' ESPN), '+changed+' changements enregistrés.');
 })().catch(e=>{console.error(e);process.exit(1)});
