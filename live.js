@@ -125,8 +125,23 @@ const toEspnMatch=(event,prefix)=>{
   console.log('MatchEnDirect : '+medCount+' matchs rapprochés sur '+matches.length+' matchs du calendrier.');
  }catch(e){console.log('MatchEnDirect indisponible : '+e.message+' (sources de secours conservées)')}
  let changed=0,tracked=0;
+ // Garde-fou : une rencontre ne peut pas être EN DIRECT avant son coup d'envoi local.
+ // MatchEnDirect peut rapprocher par erreur un score voisin d'un match futur.
+ const parisParts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+ const parisNow=parisParts.filter(p=>['year','month','day','hour','minute'].includes(p.type)).reduce((o,p)=>(o[p.type]=p.value,o),{});
+ const nowKey=parisNow.year+'-'+parisNow.month+'-'+parisNow.day+'T'+parisNow.hour+':'+parisNow.minute;
+ const beforeKickoff=m=>!!(m&&m.d&&m.h&&String(m.d)+'T'+String(m.h).slice(0,5)>nowKey);
+ const impossibleBeforeKickoff=['IN_PLAY','PAUSED','FINISHED'];
+ // Nettoie aussi les statuts erronés déjà enregistrés (ex. Norvège avant 18h).
+ for(const m of matches){
+  if(beforeKickoff(m)&&impossibleBeforeKickoff.includes(m.liveStatus)){
+   delete m.liveStatus;delete m.liveMinute;delete m.liveAdded;delete m.liveScore;
+   delete m.liveUpdatedAt;delete m.liveSource;changed++;
+  }
+ }
  for(const f of fetched){
   const m=ids.get(String(f.id));if(!m)continue;
+  if(beforeKickoff(m)&&impossibleBeforeKickoff.includes(f.status))continue;
   if(!['IN_PLAY','PAUSED','FINISHED','SUSPENDED','POSTPONED','CANCELLED','AWARDED'].includes(f.status))continue;
   tracked++;
   const rawScore=f.score&&f.score.fullTime;
