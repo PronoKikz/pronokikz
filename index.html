@@ -235,12 +235,12 @@ const hasBet=(m,k,sd)=>BETS.some(b=>b.id===m.id&&b.kind===k&&b.side===sd);
 function addBet(m,kind,side,label,p,cb,quiet){const ex=BETS.find(b=>b.id===m.id&&b.kind===kind&&b.side===side);
  if(ex){if(cb)ex.cb=true}else BETS.push({id:m.id,d:m.d,h:m.h,lg:m.lg,home:m.home,away:m.away,kind,side,label,p,cote:+(1/p).toFixed(2),mise:0,st:'',cb:!!cb});
  if(!quiet){saveB();render()}}
-function legSt(b){const m=M.find(x=>x.id===b.id);if(m&&m.r){const[a,c]=m.r,real=a>c?'1':a==c?'N':'2';b.st=(b.kind=='x2'?b.side.includes(real):b.kind=='btts'?(b.side=='oui')==(a>0&&c>0):b.kind=='o15'?(b.side=='plus')==(a+c>1):(b.side=='plus')==(a+c>2))?'g':'p'}return b.st||''}
+function legSt(b){const norm=s=>String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');const m=M.find(x=>String(x.id)===String(b.id))||M.find(x=>x.d===b.d&&norm(x.home)===norm(b.home)&&norm(x.away)===norm(b.away));if(m&&m.r){const[a,c]=m.r,real=a>c?'1':a==c?'N':'2';b.st=(b.kind=='x2'?b.side.includes(real):b.kind=='btts'?(b.side=='oui')==(a>0&&c>0):b.kind=='o15'?(b.side=='plus')==(a+c>1):(b.side=='plus')==(a+c>2))?'g':'p'}else{const kickoff=String(b.d||'')+'T'+String(b.h||'23:59');const elapsed=b.d&&b.d<TD||b.d===TD&&Date.now()>=new Date(kickoff).getTime();if(elapsed)b.st='x'}return b.st||''}
 const comboSt=L=>{L.forEach(legSt);return L.some(b=>b.st=='p')?'p':L.length&&L.every(b=>b.st=='g')?'g':''};
 const eur=x=>(Math.round(x*100)/100).toFixed(2).replace('.',',')+' €';
 const nf=(x,d)=>x.toFixed(d==null?2:d).replace('.',',');
 const stakeAdvice=(p,cote)=>{const edge=p*cote-1,f=edge/(cote-1),st=Math.round(BANK*Math.min(f*.25,.03)*2)/2;return edge>.02&&st>0?'Mise conseillée : '+eur(st)+' (Kelly prudent : 1/4, maximum 3 % de la cagnotte)':'Pas d’avantage à cette cote : mieux vaut ne pas jouer (il faudrait au moins '+nf(1/p*1.02)+').'};
-const chipSt=st=>h('span','chip '+(st=='g'?'g':st=='p'?'r':''),st=='g'?'✓ GAGNÉ':st=='p'?'✗ PERDU':'En attente');
+const chipSt=st=>h('span','chip '+(st=='g'?'g':st=='p'?'r':''),st=='g'?'✓ GAGNÉ':st=='p'?'✗ PERDU':st=='x'?'Terminé · score indisponible':'En attente');
 const numInput=(v,step,fn)=>{const i=h('input','inp');i.type='number';i.step=step;i.value=v;i.onchange=()=>fn(+i.value);return i};
 function mesPronos(){
  BETS.forEach(legSt);COMBOS.forEach(c=>{c.st=comboSt(c.legs)||c.st||''});saveB();
