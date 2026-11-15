@@ -121,7 +121,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const fin=e&&e.fin?e.fin:((rank[0][0]==='1'||rank[0][0]==='2')&&rank[0][1]>=.56&&rank[0][1]-rank[1][1]>=.12?rank[0][0]:rank[0][0]==='N'&&rank[0][1]>=.55?'N':d[0]);
  return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin,expertManual:!!(e&&e.fin),ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
 (async()=>{
- const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
+ const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),hourKey=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit'}).format(now),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
  const prev=pj.matches||[],hist=pj.hist||[],old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
  const fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
@@ -145,16 +145,17 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     ia:'Estimation : forme, niveau, domicile/extérieur, attaque/défense, confrontations, repos.'}}
   if(!m.lock){
    // 1) cotes du marché (une fois par jour)
-   if(OD&&SPORT[c]&&m.mkAt!==today){
+   const kickoff=new Date(m.d+'T'+m.h+':00').getTime(),minutesToKickoff=(kickoff-now.getTime())/60000,refreshKey=minutesToKickoff>=0&&minutesToKickoff<=90?'pre-'+Math.floor(now.getTime()/600000):'hour-'+hourKey;
+   if(OD&&SPORT[c]&&m.mkAt!==refreshKey){
     if(!oc[c]){try{oc[c]=await oddsFor(c)}catch(e){console.log(e.message);oc[c]=[]}}
     const ev=oc[c].find(e=>(same(e.h,f.homeTeam.name)||same(e.h,f.homeTeam.shortName))&&(same(e.a,f.awayTeam.name)||same(e.a,f.awayTeam.shortName)));
-    m={...m,mkAt:today};
+    m={...m,mkAt:refreshKey};
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
       m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.15*raw.p1+.85*ev.p[0]),r3(.15*raw.pN+.85*ev.p[1]),r3(.15*raw.p2+.85*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
    }
    // 2) buteur probable : IA OpenAI si OPENAI_API_KEY est configurée, sinon modèle statistique.
-   if(m.btp===undefined||(process.env.OPENAI_API_KEY&&m.btSource!=='openai'&&!m.lock)){
+   if(m.btp===undefined||(process.env.OPENAI_API_KEY&&m.btSource!=='openai'&&!m.lock&&m.btAt!==refreshKey)){
     if(m.x){
      const T=await loadStats(c),H=T[f.homeTeam.id],A=T[f.awayTeam.id],players=await loadScorers(c);
      let aiPick=null;
@@ -163,12 +164,12 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
       catch(e){console.log('IA buteur indisponible pour '+m.home+' - '+m.away+' : '+e.message)}
      }
      const fallback=H&&A?pickScorer(players,H,A,m.x,f.homeTeam.id,f.awayTeam.id):{bt:'',btp:0};
-     m={...m,...(aiPick||fallback),btSource:aiPick?'openai':(fallback.bt?'statistical':'none')};
+     m={...m,...(aiPick||fallback),btSource:aiPick?'openai':(fallback.bt?'statistical':'none'),btAt:refreshKey};
     } else m={...m,bt:'',btp:0,btSource:'none'}
    }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()};
-   if(process.env.OPENAI_API_KEY&&!m.expertManual&&m.aiAt!==today){try{const ai=await pickMatchWithAI(m);if(ai)m={...m,...ai,fin:ai.aiFin}}catch(e){console.log('Analyse IA indisponible pour '+m.home+' - '+m.away+' : '+e.message)}}}
+   if(process.env.OPENAI_API_KEY&&!m.expertManual&&m.aiAt!==refreshKey){try{const ai=await pickMatchWithAI(m);if(ai)m={...m,...ai,fin:ai.aiFin}}catch(e){console.log('Analyse IA indisponible pour '+m.home+' - '+m.away+' : '+e.message)}}}
   const ft=f.score&&f.score.fullTime;
   out.push({...m,d:day(new Date(f.utcDate)),h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(new Date(f.utcDate)),
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null});seen.add(f.id)}
