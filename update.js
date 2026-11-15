@@ -141,7 +141,7 @@ const { buildHistoryEntry } = require('./history');
 const { pickScorerWithAI } = require('./ai_scorer');
 const { pickMatchWithAI } = require('./ai_match');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
-let EXPL=[];try{EXPL=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';EXPERTS')||[]}catch(e){console.log('expert.js illisible : '+e.message)}
+let EXPL=[],MANUAL_EXTRA=[];try{const cfg=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';({EXPERTS,EXTRA})')||{};EXPL=cfg.EXPERTS||[];MANUAL_EXTRA=cfg.EXTRA||[]}catch(e){console.log('expert.js illisible : '+e.message)}
 function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
  let[p1,pN,p2]=m.b0||[m.p1,m.pN,m.p2];
  if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));p1=Math.max(.02,p1+k);p2=Math.max(.02,p2-k);const t=p1+pN+p2;p1/=t;pN/=t;p2/=t}
@@ -351,6 +351,18 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   console.log('Ligue des nations UEFA :',parsed.length,'rencontres ESPN,',completed.length,'terminées');
  } catch(e) {
   console.log('Ligue des nations UEFA indisponible pour cette mise à jour : '+e.message);
+ }
+ // Matchs manuels : intégrer les rencontres déclarées dans expert.js, absentes des flux API.
+ for(const extra of MANUAL_EXTRA){
+  if(!extra||!extra.id||!extra.d||extra.d<from||extra.d>last)continue;
+  const id=String(extra.id);
+  if(seen.has(id))continue;
+  const oldManual=old[id],kickoff=new Date(extra.d+'T'+(extra.h||'12:00')+':00+01:00').getTime();
+  const started=Number.isFinite(kickoff)&&kickoff<=Date.now();
+  let manual={...extra,id,lg:extra.lg||'Matchs internationaux',lock:started?1:0,pt:new Date().toISOString()};
+  if(started&&oldManual)manual={...manual,...oldManual,id,lock:1,r:oldManual.r||manual.r||null};
+  else manual=applyExperts(manual);
+  out.push(manual);seen.add(id);
  }
  // enregistrement définitif : un prono terminé entre dans l'historique une seule fois et n'est JAMAIS modifié ensuite
  const ids=new Set(hist.map(e=>e.i));
