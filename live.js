@@ -135,6 +135,19 @@ const toEspnMatch=(event,prefix)=>{
  const nowKey=parisNow.year+'-'+parisNow.month+'-'+parisNow.day+'T'+parisNow.hour+':'+parisNow.minute;
  const beforeKickoff=m=>!!(m&&m.d&&m.h&&String(m.d)+'T'+String(m.h).slice(0,5)>nowKey);
  const impossibleBeforeKickoff=['IN_PLAY','PAUSED','FINISHED'];
+ // Un score final déjà enregistré est prioritaire sur tout ancien statut live.
+ // Cela empêche un match terminé de rester bloqué sur MI-TEMPS si une source
+ // secondaire renvoie encore un état PAUSED ou ne renvoie plus l'événement.
+ for(const m of matches){
+  if(Array.isArray(m.r)&&m.r.length===2&&m.r.every(Number.isFinite)){
+   const finalScore=[m.r[0],m.r[1]];
+   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(finalScore);
+   if(m.liveStatus!=='FINISHED'||scoreChanged||m.liveMinute!=null||m.liveAdded!=null){
+    m.liveStatus='FINISHED';m.liveScore=finalScore;m.liveMinute=null;m.liveAdded=null;
+    m.liveUpdatedAt=new Date().toISOString();changed++;
+   }
+  }
+ }
  // Nettoie aussi les statuts erronés déjà enregistrés (ex. Norvège avant 18h).
  for(const m of matches){
   if(beforeKickoff(m)&&impossibleBeforeKickoff.includes(m.liveStatus)){
