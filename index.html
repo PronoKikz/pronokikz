@@ -57,7 +57,7 @@ h2{font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:.06e
 <p class="mu">Estimations indicatives, sans garantie de gain. Jouer comporte des risques : endettement, isolement… Réservé aux +18 ans. Aide : 09 74 75 13 13.</p>
 </main>
 <script>
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=3',{updateViaCache:'none'});
 const $=id=>document.getElementById(id),A=$('app');
 const h=(t,c,x,...k)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;k.forEach(n=>n&&e.appendChild(n));return e};
 const TEAM_FR={
