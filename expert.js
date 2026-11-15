@@ -3,14 +3,14 @@
 // fin : 1, N, 2 (résultat) ou 1N, N2, 12 (double chance) ; ex : avis des experts ; bt : buteur conseillé
 // aj : ajustement manuel (absences, enjeux, tactique, confrontations) de -1 à +1 ; positif = avantage à l'équipe à domicile
 const EXPERTS=[
-{h:'chypre',a:'montenegro',fin:'',ex:'',bt:'Marcus Edwards (2 buts en Ligue des nations)'},
-{h:'lettonie',a:'armenie',fin:'',ex:'',bt:'Artur Gharibyan (2 buts en Ligue des nations)'},
-{h:'bielorussie',a:'albanie',fin:'',ex:'',bt:'Rey Manaj (3 buts en Ligue des nations)'},
-{h:'finlande',a:'saint-marin',fin:'',ex:'',bt:'Leo Walta (4 buts en Ligue des nations)'},
-{h:'belgique',a:'italie',fin:'',ex:'',bt:'Pio Esposito (4 buts en Ligue des nations)'},
-{h:'croatie',a:'tchequie',fin:'',ex:'',bt:'Petar Sučić (1 but en Ligue des nations)'},
+{h:'cyprus',a:'montenegro',fin:'',ex:'',bt:'Marcus Edwards (2 buts en Ligue des nations)'},
+{h:'latvia',a:'armenia',fin:'',ex:'',bt:'Artur Gharibyan (2 buts en Ligue des nations)'},
+{h:'belarus',a:'albania',fin:'',ex:'',bt:'Rey Manaj (3 buts en Ligue des nations)'},
+{h:'finland',a:'sanmarino',fin:'',ex:'',bt:'Leo Walta (4 buts en Ligue des nations)'},
+{h:'belgium',a:'italy',fin:'',ex:'',bt:'Pio Esposito (4 buts en Ligue des nations)'},
+{h:'croatia',a:'czechia',fin:'',ex:'',bt:'Petar Sučić (1 but en Ligue des nations)'},
 {h:'france',a:'turkiye',fin:'',ex:'',bt:'Michael Olise (5 buts en Ligue des nations)'},
-{h:'espagne',a:'angleterre',fin:'',ex:'',bt:'Harry Kane (7 buts en Ligue des nations)'},
+{h:'spain',a:'england',fin:'',ex:'',bt:'Harry Kane (7 buts en Ligue des nations)'},
 {h:'turquie',a:'belgique',fin:'2',ex:'Experts : victoire de la Belgique.',bt:''},
 {h:'italie',a:'france',fin:'N2',ex:'Experts : la France gagne ou fait nul, moins de 2,5 buts. Italie sans Kean, Retegui ni Raspadori.',bt:'Mbappé (France)'},
 {h:'angleterre',a:'croatie',fin:'1',ex:'Experts : victoire de l’Angleterre, plus de 2,5 buts (moins de 3,5 pour certains). 7-0 à l’aller.',bt:'Kane (Angleterre)'}
