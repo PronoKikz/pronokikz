@@ -4,9 +4,9 @@
 // Ce script ne recalcule pas les pronostics et ne consomme pas les quotas Odds/OpenAI.
 const fs=require('fs');
 const K=process.env.FOOTBALL_DATA_API_KEY||process.env.FOOTBALL_DATA_KEY;
-if(!K){console.error('Clé Football Data manquante');process.exit(1)}
+if(!K)console.log('Clé Football Data absente : ESPN et MatchEnDirect restent actifs en secours.');
 const CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(',').map(x=>x.trim()).filter(Boolean);
-const get=async(path)=>{const r=await fetch('https://api.football-data.org/v4'+path,{headers:{'X-Auth-Token':K}});if(!r.ok)throw new Error(path+' -> '+r.status);return r.json()};
+const get=async(path)=>{if(!K)throw new Error('Clé Football Data absente');const r=await fetch('https://api.football-data.org/v4'+path,{headers:{'X-Auth-Token':K}});if(!r.ok)throw new Error(path+' -> '+r.status);return r.json()};
 const day=(n)=>{const d=new Date(Date.now()+n*864e5);return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(d)};
 const espnDay=(n)=>day(n).replace(/-/g,'');
 const espnEvents=async(sport,date)=>{
@@ -146,6 +146,15 @@ const toEspnMatch=(event,prefix)=>{
     m.liveStatus='FINISHED';m.liveScore=finalScore;m.liveMinute=null;m.liveAdded=null;
     m.liveUpdatedAt=new Date().toISOString();changed++;
    }
+  }
+ }
+ // Efface un état live trop ancien si aucune source ne confirme encore le match.
+ // On préfère afficher une donnée manquante plutôt qu'un faux EN DIRECT/MI-TEMPS figé.
+ const staleBefore=Date.now()-10*60*1000;
+ for(const m of matches){
+  if(['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus)&&m.liveUpdatedAt&&Date.parse(m.liveUpdatedAt)<staleBefore){
+   delete m.liveStatus;delete m.liveMinute;delete m.liveAdded;delete m.liveScore;
+   delete m.liveUpdatedAt;delete m.liveSource;changed++;
   }
  }
  // Nettoie aussi les statuts erronés déjà enregistrés (ex. Norvège avant 18h).
