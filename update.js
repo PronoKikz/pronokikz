@@ -155,7 +155,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
       m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.15*raw.p1+.85*ev.p[0]),r3(.15*raw.pN+.85*ev.p[1]),r3(.15*raw.p2+.85*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
    }
    // 2) buteur probable : IA OpenAI si OPENAI_API_KEY est configurée, sinon modèle statistique.
-   if(m.btp===undefined||(process.env.OPENAI_API_KEY&&m.btSource!=='openai'&&!m.lock&&m.btAt!==refreshKey)){
+   if(m.btp===undefined||(!m.lock&&m.btAt!==refreshKey)){
     if(m.x){
      const T=await loadStats(c),H=T[f.homeTeam.id],A=T[f.awayTeam.id],players=await loadScorers(c);
      let aiPick=null;
@@ -169,7 +169,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()};
-   if(process.env.OPENAI_API_KEY&&!m.expertManual&&m.aiAt!==refreshKey){try{const ai=await pickMatchWithAI(m);if(ai)m={...m,...ai,fin:ai.aiFin}}catch(e){console.log('Analyse IA indisponible pour '+m.home+' - '+m.away+' : '+e.message)}}}
+   if(process.env.OPENAI_API_KEY&&!m.expertManual&&m.aiAt!==refreshKey){try{const ai=await pickMatchWithAI(m);if(ai)m={...m,...ai,fin:ai.aiFin,aiAt:refreshKey}}catch(e){console.log('Analyse IA indisponible pour '+m.home+' - '+m.away+' : '+e.message)}}}
   const ft=f.score&&f.score.fullTime;
   out.push({...m,d:day(new Date(f.utcDate)),h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(new Date(f.utcDate)),
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null});seen.add(f.id)}
