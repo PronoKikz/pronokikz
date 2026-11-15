@@ -1,4 +1,5 @@
 // Mise à jour légère des scores et statuts en direct.
+// Détection élargie des statuts ESPN pour les matchs internationaux.
 // Football-Data pour les championnats principaux ; ESPN pour les compétitions ajoutées via ESPN.
 // Ce script ne recalcule pas les pronostics et ne consomme pas les quotas Odds/OpenAI.
 const fs=require('fs');
