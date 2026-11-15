@@ -82,6 +82,9 @@ const toEspnMatch=(event,prefix)=>{
  };
  const medNorm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s'-]/g,' ').replace(/\s+/g,' ').trim();
  const medTeam=s=>medNorm(medAliases[String(s||'').toLowerCase()]||s);
+ // ESPN et Football-Data sont les sources de référence. MatchEnDirect ne doit
+ // jamais écraser un événement déjà reçu d'une source structurée.
+ const authoritativeIds=new Set(fetched.filter(x=>x.source==='ESPN'||x.source==='Football-Data').map(x=>String(x.id)));
  try{
   const response=await fetch('https://www.matchendirect.fr/live-score/',{headers:{'User-Agent':'Mozilla/5.0 (compatible; PronokikzLive/1.0)','Accept':'text/html'}});
   if(!response.ok)throw new Error('HTTP '+response.status);
@@ -95,7 +98,7 @@ const toEspnMatch=(event,prefix)=>{
   const textMed=medNorm(visible);
   let medCount=0;
   for(const m of matches){
-   if(!m||!m.home||!m.away)continue;
+   if(!m||!m.home||!m.away||authoritativeIds.has(String(m.id)))continue;
    const home=medTeam(m.home),away=medTeam(m.away);
    if(!home||!away)continue;
    let cursor=0,found=null;
@@ -112,12 +115,17 @@ const toEspnMatch=(event,prefix)=>{
      // Le texte aplati de MatchEnDirect peut placer la minute d'un match voisin
      // juste avant le nom de l'équipe. On ne lit donc plus l'horloge dans "before".
      // Une minute n'est affichée que si elle suit immédiatement les deux équipes.
-     const context=(before.slice(-90)+' '+between+' '+after).replace(/\s+/g,' ');
+     // Ne pas lire les mots placés avant les équipes : ils peuvent appartenir
+     // au match précédent dans le texte aplati de la page.
+     const context=(between+' '+after).replace(/\s+/g,' ');
      const minuteMatches=[...after.matchAll(/(?:^|\s)(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
      const minute=minuteMatches.length?Number(minuteMatches[0][1]):null;
      const done=/\b(?:termine|terminee|fin du match|match fini|full.?time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties|penalty shoot.?out)\b/.test(context)||/\bft\b/i.test(context);
      const halftime=/mi.?temps|half.?time|halftime|interval/.test(context);
      const suspended=/suspendu|suspended|interrompu/.test(context);
+     // Sans horloge lisible, ou après 90' sans confirmation de fin, la source
+     // textuelle est trop ambiguë pour publier un score/statut fiable.
+     if(minute==null||minute>=90&&!done){cursor=ai+away.length;continue;}
      found={id:String(m.id),status:done?'FINISHED':suspended?'SUSPENDED':halftime?'PAUSED':'IN_PLAY',
       minute,score:{home:Number(score[1]),away:Number(score[2])}};
      break;
@@ -174,7 +182,7 @@ const toEspnMatch=(event,prefix)=>{
   const liveScore=rawScore&&Number.isFinite(rawScore.home)&&Number.isFinite(rawScore.away)?[rawScore.home,rawScore.away]:null;
   const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null,status=f.status||null;
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
-  const sourcePriority={'Football-Data':1,'ESPN':2,'MatchEnDirect':3};
+  const sourcePriority={'MatchEnDirect':1,'ESPN':2,'Football-Data':3};
   const incomingPriority=sourcePriority[f.source]||0,currentPriority=sourcePriority[m.liveSource]||0;
   // MI-TEMPS n'est pas un état final : un match peut reprendre en IN_PLAY.
   // On accepte donc la transition PAUSED -> IN_PLAY, même si la source entrante
@@ -185,7 +193,12 @@ const toEspnMatch=(event,prefix)=>{
   const resumeAfterHalftime=m.liveStatus==='PAUSED'&&status==='IN_PLAY';
   if(incomingPriority<currentPriority&&!resumeAfterHalftime&&!finalIncoming)continue;
   const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged||m.liveSource!==f.source;
-  if(!changedNow)continue;
+  if(!changedNow){
+   // Une source structurée qui confirme encore l'événement rafraîchit aussi
+   // sa fraîcheur, même si le score et la minute n'ont pas changé (mi-temps).
+   if(f.source!=='MatchEnDirect')m.liveUpdatedAt=new Date().toISOString();
+   continue;
+  }
   m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();m.liveSource=f.source;
   if(status==='FINISHED'&&liveScore)m.r=liveScore;
   changed++;
