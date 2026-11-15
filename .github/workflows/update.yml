@@ -15,8 +15,7 @@ on:
       - 'history.js'
       - '.github/workflows/update.yml'
   schedule:
-    - cron: '0 5 * * *'
-    - cron: '0 12-22/2 * * *'
+    - cron: '0 * * * *' # Actualisation générale toutes les heures
   workflow_dispatch:
 permissions:
   contents: write
