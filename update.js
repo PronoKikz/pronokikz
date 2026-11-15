@@ -16,33 +16,6 @@ const nz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f
 const same=(a,b)=>{a=nz(a);b=nz(b);return !!a&&!!b&&(a.includes(b)||b.includes(a))};
 const { model } = require('./predictor');
 
-// Extrait un meilleur buteur uniquement si ESPN fournit une statistique de buts vérifiable.
-// Le classement peut être fourni au niveau du match ou de chaque équipe.
-function espnGoalLeader(event) {
- const comp=(event&&event.competitions||[])[0];
- if(!comp)return '';
- const candidates=[];
- const collect=(leaders,teamName='')=>{
-  (Array.isArray(leaders)?leaders:[]).forEach(category=>{
-   const key=String(category.name||category.displayName||category.shortDisplayName||'').toLowerCase();
-   if(!key.includes('goal')&&!key.includes('but'))return;
-   (category.leaders||[]).forEach(item=>{
-    const athlete=item.athlete||{};
-    const name=athlete.displayName||athlete.fullName||athlete.name;
-    const raw=Number(item.value);
-    const parsed=parseInt(String(item.displayValue||''),10);
-    const goals=Number.isFinite(raw)?raw:parsed;
-    if(name&&Number.isFinite(goals)&&goals>0)candidates.push({name,goals,team:teamName||(item.team&&item.team.displayName)||''});
-   });
-  });
- };
- collect(comp.leaders);
- (comp.competitors||[]).forEach(team=>collect(team.leaders,team.team&&team.team.displayName||''));
- const unique=new Map();
- candidates.forEach(p=>{const old=unique.get(p.name);if(!old||p.goals>old.goals)unique.set(p.name,p)});
- const best=[...unique.values()].sort((a,b)=>b.goals-a.goals)[0];
- return best?best.name+' ('+best.goals+' buts en compétition'+(best.team?' · '+best.team:'')+')':'';
-}
 const r3=x=>Math.round(x*1000)/1000,r=(x,y)=>y?x/y:0,sum=a=>a.reduce((s,v)=>s+v,0);
 // Poisson + correction Dixon-Coles ; sortie : 1N2, BTTS, +1,5, +2,5, scores les plus probables
 const HL=70,fin=m=>m.status==='FINISHED'&&m.score&&m.score.fullTime&&m.score.fullTime.home!=null;
@@ -158,7 +131,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const loadStats=async c=>{if(!st[c]){try{await sleep(6500);const cur=(await get('/competitions/'+c+'/matches?status=FINISHED')).matches||[];st[c]=stats(cur);let pm=[];
    try{await sleep(6500);pm=(await get('/competitions/'+c+'/matches?season='+(S-1)+'&status=FINISHED')).matches||[]}catch(e){console.log('saison précédente '+c+' : '+e.message)}
    st[c].meets=[...meetsOf(cur),...meetsOf(pm)]}catch(e){console.log('stats '+c+' : '+e.message);st[c]={}}}return st[c]};
- const loadScorers=async c=>{if(!sc[c]){try{await sleep(6500);sc[c]=(await get('/competitions/'+c+'/scorers?limit=100')).scorers||[]}catch(e){console.log('buteurs '+c+' : '+e.message);sc[c]=[]}}return sc[c]};
+
  for(const f of fx){
   const c=f.competition.code,started=new Date(f.utcDate).getTime()<=Date.now()||!['TIMED','SCHEDULED'].includes(f.status);let m=old[f.id];
   if(!m&&started)continue;                       // aucun prono n'est créé après le coup d'envoi
@@ -181,19 +154,6 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
       m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.15*raw.p1+.85*ev.p[0]),r3(.15*raw.pN+.85*ev.p[1]),r3(.15*raw.p2+.85*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
-   }
-   // 2) buteur probable : IA OpenAI si OPENAI_API_KEY est configurée, sinon modèle statistique.
-   if(m.btp===undefined||(!m.lock&&m.btAt!==refreshKey)){
-    if(m.x){
-     const T=await loadStats(c),H=T[f.homeTeam.id],A=T[f.awayTeam.id],players=await loadScorers(c);
-     let aiPick=null;
-     if(H&&A&&process.env.OPENAI_API_KEY){
-      try{aiPick=await pickScorerWithAI(players,H,A,m.x,f.homeTeam.id,f.awayTeam.id,{home:m.home,away:m.away})}
-      catch(e){console.log('IA buteur indisponible pour '+m.home+' - '+m.away+' : '+e.message)}
-     }
-     const fallback=H&&A?pickScorer(players,H,A,m.x,f.homeTeam.id,f.awayTeam.id):{bt:'',btp:0};
-     m={...m,...(aiPick||fallback),btSource:aiPick?'openai':(fallback.bt?'statistical':'none'),btAt:refreshKey};
-    } else m={...m,bt:'',btp:0,btSource:'none'}
    }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()};
@@ -264,11 +224,10 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,
     x:[r3(lh),r3(la)],fm:[h.n,a.n],ng:[h.n,a.n],r:score,lock:started?1:0,
     ia:'Pronostic statistique UWCL : résultats de la phase de ligue, buts marqués/encaissés et avantage du terrain. '+(Math.min(h.n,a.n)<3?'Échantillon limité : estimation indicative.':'Forme issue des matchs déjà joués dans la compétition.'),
-    bt:espnGoalLeader(e.event),btSource:'espn-leaders',
     pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
    };
    if(started&&oldW){
-    m={...m,...oldW,bt:oldW.bt||m.bt||'',btSource:oldW.bt?'saved':m.bt?'espn-leaders':'none',d,h:m.h,r:score||oldW.r||null,lock:1};
+    m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:1};
    } else {
     const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
     if(ev)m=blendMarketOdds(m,ev,.85);
@@ -336,11 +295,10 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     x:[r3(lh),r3(la)],fm:[h.n,a.n],ng:[h.n,a.n],
     r:score,lock:started?1:0,
     ia:'Pronostic statistique ESPN : résultats récents de la Ligue des nations et modèle de buts attendus. '+(Math.min(h.n,a.n)<3?'Historique limité : estimation indicative.':'Forme basée sur les matchs déjà joués dans la compétition.'),
-    bt:espnGoalLeader(e.event),btSource:'espn-leaders',
     pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
    };
    if(started&&oldN){
-    m={...m,...oldN,bt:oldN.bt||m.bt||'',btSource:oldN.bt?'saved':m.bt?'espn-leaders':'none',d,h:m.h,r:score||oldN.r||null,lock:1};
+    m={...m,...oldN,d,h:m.h,r:score||oldN.r||null,lock:1};
    } else {
     const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
     if(ev)m=blendMarketOdds(m,ev,.85);
@@ -368,7 +326,15 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const ids=new Set(hist.map(e=>e.i));
  out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, null));ids.add(m.id)}});
  const H2=hist.slice(-3000),keep=day(off(-14));
- const all=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
+ const combined=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)];
+ const identity=m=>[m.d||'',nz(m.home),nz(m.away)].join('|');
+ const unique=new Map();
+ combined.forEach(original=>{
+  if(!original||!original.home||!original.away)return;
+  const {bt,btp,btSource,btAt,...m}=original,key=identity(m),prior=unique.get(key);
+  if(!prior||(!prior.r&&m.r)||(!prior.p1&&m.p1))unique.set(key,m);
+ });
+ const all=[...unique.values()].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
  const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
  fs.writeFileSync('data.json',JSON.stringify({updatedAt:new Date().toISOString(),matches:all,hist:H2}));
  const fr=new Intl.DateTimeFormat('fr-FR',{...tz,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
