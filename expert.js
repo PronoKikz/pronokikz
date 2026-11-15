@@ -9,7 +9,7 @@ const EXPERTS=[
 {h:'finland',a:'sanmarino',fin:'',ex:'',bt:'Leo Walta (4 buts en Ligue des nations)'},
 {h:'belgium',a:'italy',fin:'',ex:'',bt:'Pio Esposito (4 buts en Ligue des nations)'},
 {h:'croatia',a:'czechia',fin:'',ex:'',bt:'Petar Sučić (1 but en Ligue des nations)'},
-{h:'france',a:'turkiye',fin:'',ex:'',bt:'Kylian Mbappé'},
+{h:'france',a:'turquie',fin:'',ex:'',bt:'Kylian Mbappé'},
 {h:'spain',a:'england',fin:'',ex:'',bt:'Harry Kane (7 buts en Ligue des nations)'},
 {h:'turquie',a:'belgique',fin:'2',ex:'Experts : victoire de la Belgique.',bt:''},
 {h:'italie',a:'france',fin:'N2',ex:'Experts : la France gagne ou fait nul, moins de 2,5 buts. Italie sans Kean, Retegui ni Raspadori.',bt:'Mbappé (France)'},
