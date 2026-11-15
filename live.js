@@ -109,11 +109,12 @@ const toEspnMatch=(event,prefix)=>{
      const score=scoreMatches[scoreMatches.length-1];
      const before=textMed.slice(Math.max(0,hi-70),hi);
      const after=textMed.slice(ai+away.length,ai+away.length+140);
-     // Le libellé d'état MatchEnDirect peut apparaître avant les équipes.
-     // On inspecte donc aussi le texte immédiatement précédent le nom du domicile.
+     // Le texte aplati de MatchEnDirect peut placer la minute d'un match voisin
+     // juste avant le nom de l'équipe. On ne lit donc plus l'horloge dans "before".
+     // Une minute n'est affichée que si elle suit immédiatement les deux équipes.
      const context=(before.slice(-90)+' '+between+' '+after).replace(/\s+/g,' ');
-     const minuteMatches=[...before.matchAll(/(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
-     const minute=minuteMatches.length?Number(minuteMatches[minuteMatches.length-1][1]):null;
+     const minuteMatches=[...after.matchAll(/(?:^|\s)(\d{1,3})(?:\s*\+\s*\d+)?\s*'/g)];
+     const minute=minuteMatches.length?Number(minuteMatches[0][1]):null;
      const done=/\b(?:termine|terminee|fin du match|match fini|full.?time|finished|ended|apres prolongation|apres tirs au but|tirs au but|penalties|penalty shoot.?out)\b/.test(context)||/\bft\b/i.test(context);
      const halftime=/mi.?temps|half.?time|halftime|interval/.test(context);
      const suspended=/suspendu|suspended|interrompu/.test(context);
