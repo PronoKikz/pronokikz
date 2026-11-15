@@ -15,6 +15,34 @@ const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).fo
 const nz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 const same=(a,b)=>{a=nz(a);b=nz(b);return !!a&&!!b&&(a.includes(b)||b.includes(a))};
 const { model } = require('./predictor');
+
+// Extrait un meilleur buteur uniquement si ESPN fournit une statistique de buts vérifiable.
+// Le classement peut être fourni au niveau du match ou de chaque équipe.
+function espnGoalLeader(event) {
+ const comp=(event&&event.competitions||[])[0];
+ if(!comp)return '';
+ const candidates=[];
+ const collect=(leaders,teamName='')=>{
+  (Array.isArray(leaders)?leaders:[]).forEach(category=>{
+   const key=String(category.name||category.displayName||category.shortDisplayName||'').toLowerCase();
+   if(!key.includes('goal')&&!key.includes('but'))return;
+   (category.leaders||[]).forEach(item=>{
+    const athlete=item.athlete||{};
+    const name=athlete.displayName||athlete.fullName||athlete.name;
+    const raw=Number(item.value);
+    const parsed=parseInt(String(item.displayValue||''),10);
+    const goals=Number.isFinite(raw)?raw:parsed;
+    if(name&&Number.isFinite(goals)&&goals>0)candidates.push({name,goals,team:teamName||(item.team&&item.team.displayName)||''});
+   });
+  });
+ };
+ collect(comp.leaders);
+ (comp.competitors||[]).forEach(team=>collect(team.leaders,team.team&&team.team.displayName||''));
+ const unique=new Map();
+ candidates.forEach(p=>{const old=unique.get(p.name);if(!old||p.goals>old.goals)unique.set(p.name,p)});
+ const best=[...unique.values()].sort((a,b)=>b.goals-a.goals)[0];
+ return best?best.name+' ('+best.goals+' buts en compétition'+(best.team?' · '+best.team:'')+')':'';
+}
 const r3=x=>Math.round(x*1000)/1000,r=(x,y)=>y?x/y:0,sum=a=>a.reduce((s,v)=>s+v,0);
 // Poisson + correction Dixon-Coles ; sortie : 1N2, BTTS, +1,5, +2,5, scores les plus probables
 const HL=70,fin=m=>m.status==='FINISHED'&&m.score&&m.score.fullTime&&m.score.fullTime.home!=null;
@@ -236,10 +264,11 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,
     x:[r3(lh),r3(la)],fm:[h.n,a.n],ng:[h.n,a.n],r:score,lock:started?1:0,
     ia:'Pronostic statistique UWCL : résultats de la phase de ligue, buts marqués/encaissés et avantage du terrain. '+(Math.min(h.n,a.n)<3?'Échantillon limité : estimation indicative.':'Forme issue des matchs déjà joués dans la compétition.'),
+    bt:espnGoalLeader(e.event),btSource:'espn-leaders',
     pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
    };
    if(started&&oldW){
-    m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:1};
+    m={...m,...oldW,bt:oldW.bt||m.bt||'',btSource:oldW.bt?'saved':m.bt?'espn-leaders':'none',d,h:m.h,r:score||oldW.r||null,lock:1};
    } else {
     const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
     if(ev)m=blendMarketOdds(m,ev,.85);
@@ -307,10 +336,11 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     x:[r3(lh),r3(la)],fm:[h.n,a.n],ng:[h.n,a.n],
     r:score,lock:started?1:0,
     ia:'Pronostic statistique ESPN : résultats récents de la Ligue des nations et modèle de buts attendus. '+(Math.min(h.n,a.n)<3?'Historique limité : estimation indicative.':'Forme basée sur les matchs déjà joués dans la compétition.'),
+    bt:espnGoalLeader(e.event),btSource:'espn-leaders',
     pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]
    };
    if(started&&oldN){
-    m={...m,...oldN,d,h:m.h,r:score||oldN.r||null,lock:1};
+    m={...m,...oldN,bt:oldN.bt||m.bt||'',btSource:oldN.bt?'saved':m.bt?'espn-leaders':'none',d,h:m.h,r:score||oldN.r||null,lock:1};
    } else {
     const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
     if(ev)m=blendMarketOdds(m,ev,.85);
