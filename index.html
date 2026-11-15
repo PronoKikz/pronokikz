@@ -350,7 +350,7 @@ async function refreshLive(){
   const response=await fetch('data.js?live='+Date.now(),{cache:'no-store'});
   if(!response.ok)throw new Error('HTTP '+response.status);
   const source=await response.text();
-  const match=source.match(/const M=(\\[[\\s\\S]*?\\]);/);
+  const match=source.match(/const M=(\[[\s\S]*?\]);/);
   if(!match)throw new Error('Données live illisibles');
   const latest=JSON.parse(match[1]);
   for(const fresh of latest){
