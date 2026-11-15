@@ -26,7 +26,7 @@ type Stats = { total: number; upcoming: number; finished: number; evaluated: num
 type ProbabilityStats = { matches:number; accuracy:number|null; brier:number|null; logLoss:number|null };
 type ComparisonStats = { matches:number; modelAccuracy:number|null; modelBrier:number|null; modelLogLoss:number|null; marketAccuracy:number|null; marketBrier:number|null; marketLogLoss:number|null };
 const matchIdentity = (m: Match) => {
- const team = (v?:string) => String(v||'').toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+ const team = (v?:string) => String(v||'').toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
  return [m.d||'',team(m.home),team(m.away)].join('|');
 };
 const deduplicateMatches = (items: Match[]) => {
@@ -70,7 +70,7 @@ const TEAM_NAMES_FR: Record<string,string> = {
  'spain':'Espagne','sweden':'Suède','switzerland':'Suisse','turkiye':'Turquie',
  'ukraine':'Ukraine','wales':'Pays de Galles'
 };
-const normalizeTeamName = (name:string) => name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/\\s+/g,' ').trim();
+const normalizeTeamName = (name:string) => name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\\s+/g,' ').trim();
 const displayTeamName = (name?:string) => { if(!name)return name||''; return TEAM_NAMES_FR[normalizeTeamName(name)]||name; };
 const displayMatchName = (name?:string) => name ? name.split(' – ').map(displayTeamName).join(' – ') : '';
 
