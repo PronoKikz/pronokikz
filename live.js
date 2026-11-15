@@ -175,13 +175,14 @@ const toEspnMatch=(event,prefix)=>{
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
   const sourcePriority={'Football-Data':1,'ESPN':2,'MatchEnDirect':3};
   const incomingPriority=sourcePriority[f.source]||0,currentPriority=sourcePriority[m.liveSource]||0;
-  // Un statut précis prime sur un simple statut EN DIRECT, quelle que soit la source.
-  // Cela évite qu'une source prioritaire remplace MI-TEMPS par IN_PLAY.
-  const statusRank={IN_PLAY:1,PAUSED:2,SUSPENDED:2,FINISHED:3};
-  const incomingRank=statusRank[status]||0,currentRank=statusRank[m.liveStatus]||0;
-  const statusUpgrade=incomingRank>currentRank;
-  if(incomingRank<currentRank)continue;
-  if(incomingPriority<currentPriority&&!statusUpgrade)continue;
+  // MI-TEMPS n'est pas un état final : un match peut reprendre en IN_PLAY.
+  // On accepte donc la transition PAUSED -> IN_PLAY, même si la source entrante
+  // est secondaire. Seul FINISHED est irréversible.
+  const finalIncoming=status==='FINISHED';
+  const finalCurrent=m.liveStatus==='FINISHED';
+  if(finalCurrent&&!finalIncoming)continue;
+  const resumeAfterHalftime=m.liveStatus==='PAUSED'&&status==='IN_PLAY';
+  if(incomingPriority<currentPriority&&!resumeAfterHalftime&&!finalIncoming)continue;
   const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged||m.liveSource!==f.source;
   if(!changedNow)continue;
   m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();m.liveSource=f.source;
