@@ -94,7 +94,7 @@ async function pickMatchWithAI(m, options = {}) {
     aiConfidence: Math.max(1, Math.min(100, Number(result.confidence) || 1)),
     aiWhy: String(result.reason || '').slice(0, 420),
     aiRisk: String(result.risk || '').slice(0, 220),
-    aiAt: new Date().toISOString().slice(0, 10),
+    aiAt: new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit' }).format(new Date()),
     aiSource: 'openai'
   };
 }
