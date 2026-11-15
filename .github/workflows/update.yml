@@ -39,4 +39,8 @@ jobs:
           git config user.name "prono-bot"
           git config user.email "bot@users.noreply.github.com"
           git add data.js data.json
-          git diff --cached --quiet || (git commit -m "Mise à jour $(date -u +%F-%H%M)" && git push)
+          if ! git diff --cached --quiet; then
+            git commit -m "Mise à jour $(date -u +%F-%H%M)"
+            git pull --rebase origin main
+            git push
+          fi
