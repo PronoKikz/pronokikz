@@ -26,7 +26,7 @@ type Stats = { total: number; upcoming: number; finished: number; evaluated: num
 type ProbabilityStats = { matches:number; accuracy:number|null; brier:number|null; logLoss:number|null };
 type ComparisonStats = { matches:number; modelAccuracy:number|null; modelBrier:number|null; modelLogLoss:number|null; marketAccuracy:number|null; marketBrier:number|null; marketLogLoss:number|null };
 const matchIdentity = (m: Match) => {
- const team = (v?:string) => String(v||'').toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+ const team = (v?:string) => { const key=String(v||'').toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); return ['turkiye','turkey','turquie'].includes(key)?'turquie':key; };
  return [m.d||'',team(m.home),team(m.away)].join('|');
 };
 const deduplicateMatches = (items: Match[]) => {
