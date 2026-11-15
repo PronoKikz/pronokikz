@@ -13,7 +13,7 @@ const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
 const teamAliases={
- 'turkiye':'turquie','turkey':'turquie','turquie':'turquie',
+ 'turkiye':'turquie','turkey':'turquie','turquie':'turquie','italy':'italie','italie':'italie','croatia':'croatie','croatie':'croatie','belgium':'belgique','belgique':'belgique','spain':'espagne','espagne':'espagne',
  'czechia':'tchequie','czechrepublic':'tchequie','tchequie':'tchequie',
  'cotedivoire':'cotedivoire','ivorycoast':'cotedivoire',
  'korearepublic':'coreedusud','southkorea':'coreedusud','koreadusud':'coreedusud',
@@ -341,7 +341,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  out.forEach(m=>{if(m.r&&m.p1!=null&&(m.lock||m.pt)&&!ids.has(m.id)){hist.push(buildHistoryEntry(m, null));ids.add(m.id)}});
  const H2=hist.slice(-3000),keep=day(off(-14));
  const combined=[...out,...prev.filter(m=>!seen.has(m.id)&&m.d&&m.d>=keep)];
- const identity=m=>[m.d||'',nz(m.home),nz(m.away)].join('|');
+ const identity=m=>[m.d||'',[nz(m.home),nz(m.away)].sort().join('|')].join('|');
  const unique=new Map();
  combined.forEach(original=>{
   if(!original||!original.home||!original.away)return;
