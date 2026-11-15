@@ -1,0 +1,55 @@
+name: Vérification renforcée avant match
+concurrency:
+  group: pronokikz-data-update
+  cancel-in-progress: false
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pre-match:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Détecter un match dans les 90 prochaines minutes
+        id: check
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const data = JSON.parse(fs.readFileSync('data.json', 'utf8'));
+          const now = new Date();
+          const local = new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Paris', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}).format(now);
+          const nowWall = Date.parse(local.replace(' ', 'T') + ':00Z');
+          const imminent = (data.matches || []).some(m => {
+            if (!m.d || !m.h || m.r || m.lock) return false;
+            const kickoff = Date.parse(m.d + 'T' + m.h + ':00Z');
+            const minutes = (kickoff - nowWall) / 60000;
+            return minutes >= 0 && minutes <= 90;
+          });
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'run=' + (imminent ? 'true' : 'false') + '\n');
+          console.log(imminent ? 'Match imminent : actualisation renforcée.' : 'Aucun match dans les 90 prochaines minutes.');
+          NODE
+      - name: Installer Node.js
+        if: steps.check.outputs.run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Actualiser les pronostics, cotes et analyses
+        if: steps.check.outputs.run == 'true'
+        run: node update.js
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY || secrets.FOOTBALL_DATA_KEY }}
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY || secrets.FOOTBALL_DATA_API_KEY }}
+          LEAGUES: ${{ vars.LEAGUES }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+      - name: Enregistrer les changements
+        if: steps.check.outputs.run == 'true'
+        run: |
+          git config user.name "prono-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data.js data.json
+          git diff --cached --quiet || (git commit -m "Actualisation pré-match $(date -u +%F-%H%M)" && git push)
