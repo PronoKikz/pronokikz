@@ -121,7 +121,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const fin=e&&e.fin?e.fin:((rank[0][0]==='1'||rank[0][0]==='2')&&rank[0][1]>=.56&&rank[0][1]-rank[1][1]>=.12?rank[0][0]:rank[0][0]==='N'&&rank[0][1]>=.55?'N':d[0]);
  return{...m,b0:m.b0||[m.p1,m.pN,m.p2],p1:r3(p1),pN:r3(pN),p2:r3(p2),fin,expertManual:!!(e&&e.fin),ex:(e&&e.ex)||'',bt:e&&e.bt?e.bt:m.bt,sv:1}}
 (async()=>{
- const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),hourKey=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit'}).format(now),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
+ const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),hourKey=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit'}).format(now),parisWallNow=Date.parse(new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(now).replace(' ','T')+'Z'),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
  const prev=pj.matches||[],hist=pj.hist||[],old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
  const fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
@@ -145,7 +145,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     ia:'Estimation : forme, niveau, domicile/extérieur, attaque/défense, confrontations, repos.'}}
   if(!m.lock){
    // 1) cotes du marché (une fois par jour)
-   const kickoff=new Date(m.d+'T'+m.h+':00').getTime(),minutesToKickoff=(kickoff-now.getTime())/60000,refreshKey=minutesToKickoff>=0&&minutesToKickoff<=90?'pre-'+Math.floor(now.getTime()/600000):'hour-'+hourKey;
+   const kickoff=Date.parse(m.d+'T'+m.h+':00Z'),minutesToKickoff=(kickoff-parisWallNow)/60000,refreshKey=minutesToKickoff>=0&&minutesToKickoff<=90?'pre-'+Math.floor(now.getTime()/600000):'hour-'+hourKey;
    if(OD&&SPORT[c]&&m.mkAt!==refreshKey){
     if(!oc[c]){try{oc[c]=await oddsFor(c)}catch(e){console.log(e.message);oc[c]=[]}}
     const ev=oc[c].find(e=>(same(e.h,f.homeTeam.name)||same(e.h,f.homeTeam.shortName))&&(same(e.a,f.awayTeam.name)||same(e.a,f.awayTeam.shortName)));
