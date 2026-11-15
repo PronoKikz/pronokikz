@@ -12,7 +12,7 @@ const SPORT={FL1:'soccer_france_ligue_one',PL:'soccer_epl',PD:'soccer_spain_la_l
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
-const nz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+const nz=s=>{const v=String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');return ['turkiye','turkey','turquie'].includes(v)?'turquie':v};
 const same=(a,b)=>{a=nz(a);b=nz(b);return !!a&&!!b&&(a.includes(b)||b.includes(a))};
 const { model } = require('./predictor');
 
