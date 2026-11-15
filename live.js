@@ -49,7 +49,7 @@ const toEspnMatch=(event,prefix)=>{
  const ids=new Map(matches.map(m=>[String(m.id),m]));
  const from=day(-1),to=day(2);
  const results=await Promise.all(CODES.map(async code=>{try{return(await get('/competitions/'+code+'/matches?dateFrom='+from+'&dateTo='+to)).matches||[]}catch(e){console.log('Live '+code+' indisponible : '+e.message);return []}}));
- const fetched=results.flat();let espnFetched=0;
+ const fetched=results.flat().map(match=>({...match,source:'Football-Data'}));let espnFetched=0;
  // Les matchs Nations et UWCL ont des identifiants ESPN préfixés dans data.json.
  const dates=[-1,0,1,2].map(espnDay);
  const espnPacks=await Promise.all(['uefa.nations','uefa.wchampions'].flatMap(sport=>dates.map(async date=>{
@@ -59,7 +59,7 @@ const toEspnMatch=(event,prefix)=>{
  const espnMatches=espnPacks.flat();espnFetched=espnMatches.length;
  for(const f of espnMatches){
   const m=ids.get(String(f.id));if(!m)continue;
-  fetched.push({id:f.id,status:f.status,minute:f.minute,injuryTime:f.injuryTime,score:{fullTime:f.liveScore}});
+  fetched.push({id:f.id,status:f.status,minute:f.minute,injuryTime:f.injuryTime,score:{fullTime:f.liveScore},source:'ESPN'});
  }
 
  // MatchEnDirect : source prioritaire pour les rencontres visibles sur son livescore.
@@ -151,9 +151,13 @@ const toEspnMatch=(event,prefix)=>{
   const liveScore=rawScore&&Number.isFinite(rawScore.home)&&Number.isFinite(rawScore.away)?[rawScore.home,rawScore.away]:null;
   const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null,status=f.status||null;
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
-  const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged||(!!f.source&&m.liveSource!==f.source);
+  const sourcePriority={'Football-Data':1,'ESPN':2,'MatchEnDirect':3};
+  const incomingPriority=sourcePriority[f.source]||0,currentPriority=sourcePriority[m.liveSource]||0;
+  // MatchEnDirect est prioritaire sur toutes les autres sources, même si celles-ci répondent après.
+  if(incomingPriority<currentPriority)continue;
+  const changedNow=m.liveStatus!==status||m.liveMinute!==minute||m.liveAdded!==added||scoreChanged||m.liveSource!==f.source;
   if(!changedNow)continue;
-  m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();if(f.source)m.liveSource=f.source;
+  m.liveStatus=status;m.liveMinute=minute;m.liveAdded=added;m.liveScore=liveScore;m.liveUpdatedAt=new Date().toISOString();m.liveSource=f.source;
   if(status==='FINISHED'&&liveScore)m.r=liveScore;
   changed++;
  }
