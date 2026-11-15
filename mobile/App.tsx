@@ -27,7 +27,7 @@ type ProbabilityStats = { matches:number; accuracy:number|null; brier:number|nul
 type ComparisonStats = { matches:number; modelAccuracy:number|null; modelBrier:number|null; modelLogLoss:number|null; marketAccuracy:number|null; marketBrier:number|null; marketLogLoss:number|null };
 const matchIdentity = (m: Match) => {
  const team = (v?:string) => { const key=String(v||'').toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); const aliases:Record<string,string>={'turkiye':'turquie','turkey':'turquie','turquie':'turquie','czechia':'tchequie','czechrepublic':'tchequie','tchequie':'tchequie','ivorycoast':'cotedivoire','cotedivoire':'cotedivoire','korearepublic':'coreedusud','southkorea':'coreedusud','koreadusud':'coreedusud','koreademocraticpeoplesrepublic':'coreedunord','northkorea':'coreedunord','unitedstates':'etatsunis','usa':'etatsunis','us':'etatsunis','etatsunis':'etatsunis','unitedarabemirates':'emiratsarabesunis','uae':'emiratsarabesunis','emiratsarabesunis':'emiratsarabesunis','netherlands':'paysbas','holland':'paysbas','paysbas':'paysbas','england':'angleterre','scotland':'ecosse','wales':'paysdegalles','bosniaandherzegovina':'bosnieherzegovine','bosnia':'bosnieherzegovine','northmacedonia':'macedoinedunord','macedonia':'macedoinedunord','capeverde':'capvert'}; return aliases[key]||key; };
- return [m.d||'',team(m.home),team(m.away)].join('|');
+ return [m.d||'',...[team(m.home),team(m.away)].sort()].join('|');
 };
 const deduplicateMatches = (items: Match[]) => {
  const unique = new Map<string,Match>();
@@ -207,7 +207,7 @@ export default function App() {
   visibleResults.forEach(m=>{const date=m.d||'Date inconnue';(groups[date]||(groups[date]=[])).push(m);});
   return Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0]));
  },[visibleResults]);
- const leagueOptions=useMemo(()=>['Toutes',...Array.from(new Set(matches.map(m=>m.lg).filter((x):x is string=>!!x))).sort((a,b)=>a.localeCompare(b,'fr'))],[matches]); const visible=useMemo(()=>upcoming.filter(m=>leagueFilter==='Toutes'||m.lg===leagueFilter),[upcoming,leagueFilter]);
+ const leagueOptions=useMemo(()=>['Toutes',...Array.from(new Set(matches.map(m=>m.lg).filter((x):x is string=>!!x))).sort((a,b)=>a.localeCompare(b,'fr'))],[matches]); const visible=useMemo(()=>deduplicateMatches(upcoming).filter(m=>leagueFilter==='Toutes'||m.lg===leagueFilter),[upcoming,leagueFilter]);
  const leagueStats=useMemo(()=>{
   const groups:Record<string,{evaluated:number;correct:number}>={};
   matches.forEach(m=>{
