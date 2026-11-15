@@ -27,7 +27,7 @@ const toEspnMatch=(event,prefix)=>{
  const done=!!type.completed||state==='post';
  const halftime=/half.?time|halftime|half time|interval/i.test(detail)||(state==='in'&&Number(status.period)===1&&String(status.displayClock||'').startsWith('0:'));
  const suspended=/suspend/i.test(detail);
- const liveStatus=done?'FINISHED':suspended?'SUSPENDED':state==='in'?(halftime?'PAUSED':'IN_PLAY'):null;
+ const liveStatus=done?'FINISHED':suspended?'SUSPENDED':(state==='in'||state==='live'||/in.?progress|in.?play|live/.test(String(type.name||'').toLowerCase()))?(halftime?'PAUSED':'IN_PLAY'):null;
  if(!liveStatus)return null;
  const scoreHome=home.score==null?null:Number(home.score);
  const scoreAway=away.score==null?null:Number(away.score);
