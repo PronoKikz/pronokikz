@@ -316,6 +316,13 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    };
    if(started&&oldN){
     m={...m,...oldN,d,h:m.h,r:score||oldN.r||null,lock:1};
+    // Un résultat ESPN confirmé est définitif : ne jamais conserver un ancien
+    // statut IN_PLAY/PAUSED ni un ancien score live après la fin du match.
+    const finalScore=score||oldN.r||null;
+    if(e.done&&finalScore){
+     m.liveStatus='FINISHED';m.liveScore=finalScore;m.liveMinute=null;m.liveAdded=null;
+     m.liveUpdatedAt=new Date().toISOString();m.liveSource='ESPN';
+    }
    } else {
     const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
     if(ev)m=blendMarketOdds(m,ev,.85);
