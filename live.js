@@ -155,7 +155,7 @@ const toEspnMatch=(event,prefix)=>{
  const nowKey=parisNow.year+'-'+parisNow.month+'-'+parisNow.day+'T'+parisNow.hour+':'+parisNow.minute;
  const beforeKickoff=m=>!!(m&&m.d&&m.h&&String(m.d)+'T'+String(m.h).slice(0,5)>nowKey);
  const impossibleBeforeKickoff=['IN_PLAY','PAUSED','FINISHED'];
- // Un score final déjà enregistré est prioritaire sur tout ancien statut live.
+ // Un score final déjà enregistré (notamment le 5-0 Allemagne–Pays-Bas) est prioritaire sur tout ancien statut live.
  // Cela empêche un match terminé de rester bloqué sur MI-TEMPS si une source
  // secondaire renvoie encore un état PAUSED ou ne renvoie plus l'événement.
  for(const m of matches){
