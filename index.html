@@ -119,11 +119,14 @@ function box(cls,ti,legs,note,next,info){const p=legs.reduce((a,x)=>a*x.p,1),e=h
  e.appendChild(h('div','tot',null,h('span',null,'Cote équitable ~'+cote(p)),h('b',null,pp(p))));if(note)e.appendChild(h('p','ia',note));
  if(legs.every(x=>x.kd&&x.id!=null)){const ab=h('button','chg','➕ Mettre ce combiné dans mes pronos');ab.onclick=()=>legsToBets(legs);e.appendChild(ab)}
  if(next){const b=h('button','chg','🔄 Autre combiné ('+info+')');b.onclick=next;e.appendChild(b)}A.appendChild(e)}
-function allLegs(m){const p=marketAware1x2(m),c=[[teamName(m.home)+' gagne',p[0],'x2','1'],['Match nul',p[1],'x2','N'],[teamName(m.away)+' gagne',p[2],'x2','2'],['BTTS oui',m.btts,'btts','oui'],['BTTS non',1-m.btts,'btts','non']];
- if(m.o15!=null)c.push(['+1,5 buts',m.o15,'o15','plus']);if(m.o25!=null)c.push(['+2,5 buts',m.o25,'o25','plus'],['-2,5 buts',1-m.o25,'o25','moins']);return c.map(([l,p,kd,sd])=>mk(m,l,p,kd,sd))}
-function favLegs(m){const p=marketAware1x2(m),c=[['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1])[0],o=[mk(m,c[0]=='1'?teamName(m.home)+' gagne':c[0]=='2'?teamName(m.away)+' gagne':'Match nul',c[1],'x2',c[0]),
-  mk(m,m.btts>=.5?'BTTS oui':'BTTS non',Math.max(m.btts,1-m.btts),'btts',m.btts>=.5?'oui':'non')];
- if(m.o25!=null)o.push(mk(m,m.o25>=.5?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25),'o25',m.o25>=.5?'plus':'moins'));return o}
+function allLegs(m){const p=marketAware1x2(m),c=[[teamName(m.home)+' gagne',p[0],'x2','1'],['Match nul',p[1],'x2','N'],[teamName(m.away)+' gagne',p[2],'x2','2']];
+ dc(m).forEach(([side,prob])=>c.push([side==='1N'?teamName(m.home)+' ou nul':side==='N2'?teamName(m.away)+' ou nul':'Pas de match nul',prob,'x2',side]));
+ c.push(['BTTS oui',m.btts,'btts','oui'],['BTTS non',1-m.btts,'btts','non']);
+ if(m.o15!=null)c.push(['+1,5 buts',m.o15,'o15','plus']);if(m.o25!=null)c.push(['+2,5 buts',m.o25,'o25','plus'],['-2,5 buts',1-m.o25,'o25','moins']);return c.filter(x=>Number.isFinite(x[1])&&x[1]>0&&x[1]<1).map(([l,p,kd,sd])=>mk(m,l,p,kd,sd))}
+function favLegs(m){const p=marketAware1x2(m),best=chooseResult(m),o=[mk(m,best==='1'?teamName(m.home)+' gagne':best==='2'?teamName(m.away)+' gagne':best==='N'?'Match nul':best==='1N'?teamName(m.home)+' ou nul':best==='N2'?teamName(m.away)+' ou nul':'Pas de match nul',pf(m,best),'x2',best)];
+ dc(m).forEach(([side,prob])=>o.push(mk(m,side==='1N'?teamName(m.home)+' ou nul':side==='N2'?teamName(m.away)+' ou nul':'Pas de match nul',prob,'x2',side)));
+ o.push(mk(m,m.btts>=.5?'BTTS oui':'BTTS non',Math.max(m.btts,1-m.btts),'btts',m.btts>=.5?'oui':'non'));
+ if(m.o25!=null)o.push(mk(m,m.o25>=.5?'+2,5 buts':'-2,5 buts',Math.max(m.o25,1-m.o25),'o25',m.o25>=.5?'plus':'moins'));return o.filter(x=>Number.isFinite(x.p)&&x.p>0&&x.p<1)}
 function beam(list,mx,maxL,fn){const res=new Map();let st=[{l:[],p:1}];
  list.forEach(m=>{const opts=(fn||allLegs)(m),nx=[];
   for(const s of st){nx.push(s);if(s.l.length<maxL)for(const o of opts){const p=s.p*o.p,n={l:[...s.l,o],p};
