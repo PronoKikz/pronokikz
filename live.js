@@ -45,7 +45,6 @@ const toEspnMatch=(event,prefix)=>{
  const scoreHome=home.score==null?null:Number(home.score);
  const scoreAway=away.score==null?null:Number(away.score);
  const liveScore=Number.isFinite(scoreHome)&&Number.isFinite(scoreAway)?{home:scoreHome,away:scoreAway}:null;
- const clock=String(competitionStatus.displayClock||eventStatus.displayClock||status.displayClock||'');
  let minute=null;
  const clockMatch=clock.match(/^(\d+)/);
  if(clockMatch)minute=Number(clockMatch[1]);
