@@ -148,7 +148,11 @@ function targetCands(open,target,min,max,fn){
 function conseilCands(open){
  const one=open.flatMap(favLegs).filter(x=>x.p>=.2&&x.p<=.5).map(x=>({l:[x],p:x.p}));
  const combos=beam(open,.5,4,allLegs).filter(x=>x.p>=.25&&x.p<=.34);
- return diversify([...one,...combos].sort((a,b)=>Math.abs(a.p-.2857)-Math.abs(b.p-.2857)),6)
+ const rank=a=>a.sort((x,y)=>Math.abs(x.p-.2857)-Math.abs(y.p-.2857));
+ const withDC=rank(combos.filter(x=>x.l.some(l=>['1N','N2','12'].includes(l.sd))));
+ const withoutDC=rank([...one,...combos.filter(x=>!x.l.some(l=>['1N','N2','12'].includes(l.sd)))]);
+ const preferred=diversify(withDC,4),regular=diversify(withoutDC,6-preferred.length);
+ return [...preferred,...regular].slice(0,6)
 }
 function safeCands(open){
  const pool=beam(open,.5,6,legsSafe).filter(x=>x.p>=.30&&x.p<=.50);
