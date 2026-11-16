@@ -316,7 +316,7 @@ function render(){
  if(view=='f'){
   const finished=M.filter(m=>m.r||m.liveStatus==='FINISHED').slice().sort((a,b)=>{const ta=Date.parse(a.d+'T'+(a.h||'00:00')+':00')||Date.parse(a.d+'T00:00:00'),tb=Date.parse(b.d+'T'+(b.h||'00:00')+':00')||Date.parse(b.d+'T00:00:00');return ta-tb});
   if(!finished.length){A.appendChild(h('p','mu','Aucun match terminé à afficher pour le moment.'));return}
-  A.appendChild(h('p','mu',finished.length+' matchs terminés · du plus récent au plus ancien'));
+  A.appendChild(h('p','mu',finished.length+' matchs terminés · du plus ancien au plus récent'));
   finished.forEach(m=>A.appendChild(card(m)));
   return;
  }
@@ -330,7 +330,7 @@ function render(){
  const fb=(t,on,f)=>{const b=h('button',on?'on':'',t);b.onclick=f;$('flt').appendChild(b)};
  fb('Tous',!F.lg,()=>{F.lg='';render()});lgs.forEach(l=>fb(l,F.lg===l,()=>{F.lg=l;render()}));fb('⭐ Confiance élevée',F.hi,()=>{F.hi=!F.hi;render()});
  const shown=dm.filter(m=>(!F.lg||m.lg===F.lg)&&(!F.hi||pick(m)[1]>=.6));
- shown.slice().sort((a,b)=>{const da=!!(a.r||a.liveStatus==='FINISHED'),db=!!(b.r||b.liveStatus==='FINISHED');if(da!==db)return da?-1:1;return da?(b.d+b.h).localeCompare(a.d+a.h):(a.d+a.h).localeCompare(b.d+b.h)}).forEach(m=>A.appendChild(card(m)));
+ shown.slice().sort((a,b)=>(a.d+(a.h||'00:00')).localeCompare(b.d+(b.h||'00:00'))).forEach(m=>A.appendChild(card(m)));
  if(!shown.length)A.appendChild(h('p','mu','Aucun match avec ce filtre.'));
  A.appendChild(crit())}
 
