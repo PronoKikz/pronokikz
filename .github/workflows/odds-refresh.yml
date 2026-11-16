@@ -1,0 +1,32 @@
+name: Actualisation fréquente des cotes
+concurrency:
+  group: pronokikz-data-update
+  cancel-in-progress: false
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  odds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Actualiser les cotes proches du coup d'envoi
+        run: node odds-refresh.js
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      - name: Enregistrer les nouvelles cotes
+        run: |
+          git config user.name "prono-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Actualisation des cotes bookmakers"
+            git pull --rebase origin main
+            git push
+          fi
