@@ -22,23 +22,34 @@ const toEspnMatch=(event,prefix)=>{
  const teams=competition&&competition.competitors||[];
  const home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
  if(!home||!away)return null;
- const status=competition.status||event.status||{};
- const type=status.type||{};
- const state=String(type.state||'').toLowerCase();
- const detail=[type.name,type.detail,type.shortDetail,status.displayClock].filter(Boolean).join(' ');
- const done=!!type.completed||state==='post';
- const halftime=/half.?time|halftime|half time|interval/i.test(detail)||(state==='in'&&Number(status.period)===1&&String(status.displayClock||'').startsWith('0:'));
+ // ESPN peut exposer un statut différent au niveau de l'événement et
+ // de la compétition. Ne pas choisir un objet status simplement parce qu'il
+ // existe : il peut être incomplet et masquer le véritable état du match.
+ const eventStatus=event.status||{};
+ const competitionStatus=competition.status||{};
+ const eventType=eventStatus.type||{};
+ const competitionType=competitionStatus.type||{};
+ const type={...eventType,...competitionType};
+ const status={...eventStatus,...competitionStatus,type};
+ const states=[eventType.state,competitionType.state].map(x=>String(x||'').toLowerCase());
+ const state=states.find(x=>['in','live','post'].includes(x))||states.find(Boolean)||'';
+ const detail=[eventType.name,eventType.detail,eventType.shortDetail,competitionType.name,competitionType.detail,competitionType.shortDetail,eventStatus.displayClock,competitionStatus.displayClock].filter(Boolean).join(' ');
+ const done=!!eventType.completed||!!competitionType.completed||states.includes('post');
+ const clock=competitionStatus.displayClock||eventStatus.displayClock||status.displayClock||'';
+ const period=competitionStatus.period??eventStatus.period??status.period;
+ const halftime=/half.?time|halftime|half time|interval/i.test(detail)||(state==='in'&&Number(period)===1&&String(clock).startsWith('0:'));
  const suspended=/suspend/i.test(detail);
- const liveStatus=done?'FINISHED':suspended?'SUSPENDED':(state==='in'||state==='live'||/in.?progress|in.?play|live/.test(String(type.name||'').toLowerCase()))?(halftime?'PAUSED':'IN_PLAY'):null;
+ const liveName=/in.?progress|in.?play|live/.test(detail.toLowerCase());
+ const liveStatus=done?'FINISHED':suspended?'SUSPENDED':(states.includes('in')||states.includes('live')||liveName)?(halftime?'PAUSED':'IN_PLAY'):null;
  if(!liveStatus)return null;
  const scoreHome=home.score==null?null:Number(home.score);
  const scoreAway=away.score==null?null:Number(away.score);
  const liveScore=Number.isFinite(scoreHome)&&Number.isFinite(scoreAway)?{home:scoreHome,away:scoreAway}:null;
- const clock=String(status.displayClock||'');
+ const clock=String(competitionStatus.displayClock||eventStatus.displayClock||status.displayClock||'');
  let minute=null;
  const clockMatch=clock.match(/^(\d+)/);
  if(clockMatch)minute=Number(clockMatch[1]);
- else if(Number.isFinite(Number(status.period)))minute=Number(status.period)>=2?45:0;
+ else if(Number.isFinite(Number(competitionStatus.period??eventStatus.period??status.period)))minute=Number(competitionStatus.period??eventStatus.period??status.period)>=2?45:0;
  let injuryTime=null;
  const addedMatch=detail.match(/(\d+)\s*\+\s*(\d+)/);
  if(addedMatch){minute=Number(addedMatch[1]);injuryTime=Number(addedMatch[2]);}
