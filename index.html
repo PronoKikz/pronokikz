@@ -104,7 +104,11 @@ function diversify(c,n){n=n||6;const pool=c.slice(0,400),out=[];
   out.push(pool.splice(bi,1)[0])}
  return out}
 function conseilCands(open){const S=open.flatMap(favLegs).filter(x=>x.p>=.2&&x.p<=.5).map(x=>({l:[x],p:x.p})),B=beam(open,.5,3,favLegs).filter(x=>x.p>=.2);
- return diversify([...S,...B].sort((a,b)=>b.p-a.p),6)}
+ const hasDC=x=>x.l.some(l=>['1N','N2','12'].includes(l.sd));
+ const dcCombos=diversify(B.filter(hasDC).sort((a,b)=>b.p-a.p),4);
+ const other=diversify([...S,...B.filter(x=>!hasDC(x))].sort((a,b)=>b.p-a.p),6-dcCombos.length);
+ return [...dcCombos,...other].slice(0,6)
+}
 function safeCands(open){let c=diversify(beam(open,.4,6,legsSafe),6);return c.length?c:diversify(cands(open,1,true),5)}
 function palier(c,thr){const out=[];thr.forEach(t=>{const b=c.find(x=>x.p<=t+1e-9&&!out.includes(x));if(b)out.push(b)});return out}
 function cyc(key,c,cls,ti,note,vide){
