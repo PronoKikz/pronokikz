@@ -287,7 +287,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   });
   const avgGoals=teamGames?goals/teamGames:1.25;
   const nationsOld=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('nations-')).map(m=>[String(m.id),m]));
-  let nationsOdds=[];if(OD){try{nationsOdds=await oddsFor('NATIONS')}catch(e){console.log('cotes Nations : '+e.message)}}
+  let nationsOdds=[];if(OD){try{nationsOdds=await oddsFor('NATIONS');console.log('Cotes Nations :',nationsOdds.length,'événements reçus ;',parsed.filter(e=>nationsOdds.some(q=>same(q.h,e.homeName)&&same(q.a,e.awayName))).length,'correspondances ESPN ; exemples API :',nationsOdds.slice(0,5).map(q=>q.h+' - '+q.a).join(' | '))}catch(e){console.log('cotes Nations : '+e.message)}}else{console.log('Cotes Nations : ODDS_API_KEY absente')}
   for(const e of parsed){
    const d=day(e.date);
    if(d<day(off(-14))||d>day(off(30)))continue;
