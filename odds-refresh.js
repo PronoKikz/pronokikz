@@ -1,5 +1,9 @@
 // Actualisation légère des cotes uniquement, sans recalculer tous les pronostics.
 const fs = require('fs');
+
+// Encapsule les await dans une fonction async : Node 22 ne peut pas
+// mélanger require() CommonJS et await au niveau supérieur.
+(async () => {
 const OD = process.env.ODDS_API_KEY;
 if (!OD) { console.log('ODDS_API_KEY absente : actualisation ignorée.'); process.exit(0); }
 const file = 'data.json';
@@ -88,3 +92,4 @@ if(changed) {
   fs.writeFileSync(file,JSON.stringify(payload));
 }
 console.log('Cotes actualisées : '+changed+' match(s). Fenêtres : 15 min à moins de 2 h du coup d’envoi, puis 5 min dans les 15 dernières minutes.');
+})().catch(error => { console.error(error); process.exit(1); });
