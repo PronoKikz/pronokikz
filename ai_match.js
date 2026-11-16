@@ -45,7 +45,6 @@ async function pickMatchWithAI(m, options = {}) {
       model: options.model || process.env.OPENAI_MODEL || 'gpt-6-astra',
       store: false,
       max_output_tokens: 320,
-      temperature: 0.2,
       instructions: [
         'Tu es l’analyste football de Pronokikz. Tu dois formuler TON avis de sélection pour ce match, pas appliquer une règle mécanique.',
         'Analyse ensemble les probabilités du modèle, le consensus du marché si disponible, les cotes, les buts attendus, la forme récente, l’échantillon, les confrontations et les marchés de buts.',
