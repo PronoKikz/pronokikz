@@ -3,6 +3,12 @@ concurrency:
   group: pronokikz-data-update
   cancel-in-progress: false
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'odds-refresh.js'
+      - '.github/workflows/odds-refresh.yml'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
