@@ -181,7 +181,8 @@ export default function App() {
  const systemScheme=useColorScheme();
  const palette=useMemo(()=>themeName==='system'?(systemScheme==='light'?THEMES.light:THEMES.dark):THEMES[themeName],[themeName,systemScheme]);
  const s=useMemo(()=>createStyles(palette),[palette]);
- const checkForAppUpdate=async()=>{
+ // Déclenche une nouvelle publication OTA sur le canal preview.
+const checkForAppUpdate=async()=>{
   if(updateChecking)return;
   if(!Updates.isEnabled){setUpdateMessage("Les mises à jour à distance ne sont pas activées pour cette installation.");return;}
   setUpdateChecking(true);
