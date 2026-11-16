@@ -173,9 +173,11 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()};
    if(process.env.OPENAI_API_KEY&&!m.expertManual&&m.aiAt!==refreshKey){try{const ai=await pickMatchWithAI(m);if(ai)m={...m,...ai,fin:ai.aiFin,aiAt:refreshKey}}catch(e){console.log('Analyse IA indisponible pour '+m.home+' - '+m.away+' : '+e.message)}}}
-  const ft=f.score&&f.score.fullTime;
+  const ft=f.score&&f.score.fullTime,liveScore=ft&&ft.home!=null?[ft.home,ft.away]:(m.liveScore||null);
   out.push({...m,d:day(new Date(f.utcDate)),h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(new Date(f.utcDate)),
-   hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null});seen.add(f.id)}
+   hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null,
+   liveStatus:f.status,liveScore,liveMinute:f.minute??null,liveAdded:f.injuryTime??null,
+   liveUpdatedAt:new Date().toISOString(),liveSource:'football-data.org'});seen.add(f.id)}
  // Ligue des champions féminine UEFA : calendrier et résultats via le scoreboard ESPN.
  // Les matchs sont ajoutés au flux principal avec un modèle statistique dédié à la compétition.
  try {
