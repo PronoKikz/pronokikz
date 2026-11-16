@@ -322,7 +322,7 @@ function render(){
  }
  dayTabs();
  if(view=='p'){mesPronos();return}
- const dm=M.filter(m=>m.d===day),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
+ const dm=M.filter(m=>m.d===day||((m.r||m.liveStatus==='FINISHED')&&m.d<day&&m.d>=dayStr(-2))),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
  if(!dm.length){A.appendChild(h('p','mu',day<TD?'Aucun prono enregistré ce jour-là (l’historique garde 14 jours).':'Aucun match à afficher pour ce jour.'));return}
  const fn=dm.map(chk).filter(Boolean);
  if(fn.length){const w=f=>fn.filter(x=>x[f]).length,o=fn.filter(x=>x.o!=null);
