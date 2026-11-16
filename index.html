@@ -314,7 +314,7 @@ function render(){
  if(view=='n'){nations();return}
  if(view=='a'){apprentissage();return}
  if(view=='f'){
-  const finished=M.filter(m=>m.r||m.liveStatus==='FINISHED').slice().sort((a,b)=>{const ta=Date.parse(a.d+'T'+(a.h||'00:00')+':00')||Date.parse(a.d+'T00:00:00'),tb=Date.parse(b.d+'T'+(b.h||'00:00')+':00')||Date.parse(b.d+'T00:00:00');return tb-ta});
+  const finished=M.filter(m=>m.r||m.liveStatus==='FINISHED').slice().sort((a,b)=>{const ta=Date.parse(a.d+'T'+(a.h||'00:00')+':00')||Date.parse(a.d+'T00:00:00'),tb=Date.parse(b.d+'T'+(b.h||'00:00')+':00')||Date.parse(b.d+'T00:00:00');return ta-tb});
   if(!finished.length){A.appendChild(h('p','mu','Aucun match terminé à afficher pour le moment.'));return}
   A.appendChild(h('p','mu',finished.length+' matchs terminés · du plus récent au plus ancien'));
   finished.forEach(m=>A.appendChild(card(m)));
