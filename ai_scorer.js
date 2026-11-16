@@ -54,7 +54,6 @@ async function pickScorerWithAI(players, homeStats, awayStats, expectedGoals, ho
       model: options.model || process.env.OPENAI_MODEL || 'gpt-6-astra',
       store: false,
       max_output_tokens: 220,
-      temperature: 0.2,
       instructions: [
         'Tu es un analyste football spécialisé dans les buteurs.',
         'Choisis au maximum UN joueur parmi la liste fournie, ou aucun si les données ne permettent pas un choix défendable.',
