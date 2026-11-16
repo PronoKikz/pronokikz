@@ -339,7 +339,7 @@ stats();render();
 // Synchronisation légère des scores sans recharger la page ni déplacer le scroll.
 let liveRefreshing=false;
 async function refreshLive(){
- if(liveRefreshing||document.hidden||!['m','n'].includes(view))return;
+ if(liveRefreshing||document.hidden||!['m','n','f'].includes(view))return;
  liveRefreshing=true;
  try{
   const response=await fetch('data.js?live='+Date.now(),{cache:'no-store'});
