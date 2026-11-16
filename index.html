@@ -310,9 +310,16 @@ function pickRow(m){const op=[['x2:1','Victoire '+teamName(m.home),m.p1],['x2:N'
  return h('div','card',null,h('div','mu',m.lg+' · '+m.h),h('div','ttl',nm(m)),h('div','gg',null,sel,b))}
 function render(){
  A.textContent='';['tabs','vtabs','flt'].forEach(i=>$(i).textContent='');
- [['m','⚽ Matchs'],['p','⭐ Mes pronos'],['n','🌍 Ligue des nations'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
+ [['m','⚽ Matchs'],['f','✓ Terminés'],['p','⭐ Mes pronos'],['n','🌍 Ligue des nations'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
  if(view=='n'){nations();return}
  if(view=='a'){apprentissage();return}
+ if(view=='f'){
+  const finished=M.filter(m=>m.r||m.liveStatus==='FINISHED').slice().sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h));
+  if(!finished.length){A.appendChild(h('p','mu','Aucun match terminé à afficher pour le moment.'));return}
+  A.appendChild(h('p','mu',finished.length+' matchs terminés · du plus récent au plus ancien'));
+  finished.forEach(m=>A.appendChild(card(m)));
+  return;
+ }
  dayTabs();
  if(view=='p'){mesPronos();return}
  const dm=M.filter(m=>m.d===day),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
