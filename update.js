@@ -77,7 +77,8 @@ function aggregate(hist){const z=()=>({n:0,h:0,b:0,no:0,o:0,br:0,ll:0}),G={tot:z
   e.p.forEach((p,i)=>{const c=cal.find(c=>p>=c.a&&p<c.b);if(c){c.n++;c.sp+=p;c.h+=i===o?1:0}})});
  G.cal=cal.filter(c=>c.n>0).map(c=>({a:c.a,b:c.b,n:c.n,p:r3(c.sp/c.n),f:r3(c.h/c.n)}));return G}
 async function oddsFor(code){
- const res=await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT[code]}/odds/?apiKey=${OD}&regions=eu&markets=h2h,totals&oddsFormat=decimal`);
+ const markets=code==='NATIONS'?'h2h':'h2h,totals';
+ const res=await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT[code]}/odds/?apiKey=${OD}&regions=eu&markets=${markets}&oddsFormat=decimal`);
  if(!res.ok)throw new Error('odds '+code+' -> '+res.status);
  return(await res.json()).map(e=>{
   const acc={p:[0,0,0],n:0,o:0,on:0};
