@@ -310,7 +310,17 @@ function pickRow(m){const op=[['x2:1','Victoire '+teamName(m.home),m.p1],['x2:N'
  return h('div','card',null,h('div','mu',m.lg+' · '+m.h),h('div','ttl',nm(m)),h('div','gg',null,sel,b))}
 function render(){
  A.textContent='';['tabs','vtabs','flt'].forEach(i=>$(i).textContent='');
- [['m','⚽ Matchs'],['f','✓ Terminés'],['p','⭐ Mes pronos'],['n','🌍 Ligue des nations'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
+ [['m','⚽ Matchs'],['l','🔴 En direct'],['f','✓ Terminés'],['p','⭐ Mes pronos'],['n','🌍 Ligue des nations'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;render()};$('vtabs').appendChild(b)});
+ if(view=='l'){
+  const live=M.filter(m=>['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus)&&liveFresh(m)).slice().sort((a,b)=>{
+   const league=String(a.lg||'').localeCompare(String(b.lg||''),'fr');
+   return league||String(a.d||'').localeCompare(String(b.d||''))||String(a.h||'').localeCompare(String(b.h||''));
+  });
+  A.appendChild(h('p','mu',live.length+' match'+(live.length>1?'s':'')+' en cours · scores actualisés automatiquement'));
+  if(!live.length)A.appendChild(h('p','mu','Aucun match en direct pour le moment. Les rencontres apparaîtront ici dès le coup d’envoi.'));
+  else live.forEach(m=>A.appendChild(card(m)));
+  return;
+ }
  if(view=='n'){nations();return}
  if(view=='a'){apprentissage();return}
  if(view=='f'){
@@ -339,7 +349,7 @@ stats();render();
 // Synchronisation légère des scores sans recharger la page ni déplacer le scroll.
 let liveRefreshing=false;
 async function refreshLive(){
- if(liveRefreshing||document.hidden||!['m','n','f'].includes(view))return;
+ if(liveRefreshing||document.hidden||!['m','n','f','l'].includes(view))return;
  liveRefreshing=true;
  try{
   const response=await fetch('data.js?live='+Date.now(),{cache:'no-store'});
@@ -348,14 +358,19 @@ async function refreshLive(){
   const match=source.match(/const M=(\[[\s\S]*?\]);/);
   if(!match)throw new Error('Données live illisibles');
   const latest=JSON.parse(match[1]);
+  let liveMembershipChanged=false;
   for(const fresh of latest){
    const current=M.find(x=>String(x.id)===String(fresh.id));if(!current)continue;
+   const wasLive=['IN_PLAY','PAUSED','SUSPENDED'].includes(current.liveStatus)&&liveFresh(current);
    ['liveStatus','liveScore','liveMinute','liveAdded','liveUpdatedAt','liveSource','r'].forEach(key=>{
     if(JSON.stringify(current[key]??null)!==JSON.stringify(fresh[key]??null)){
      if(fresh[key]===undefined)delete current[key];else current[key]=fresh[key];
     }
    });
+   const isLive=['IN_PLAY','PAUSED','SUSPENDED'].includes(current.liveStatus)&&liveFresh(current);
+   if(wasLive!==isLive)liveMembershipChanged=true;
   }
+  if(view==='l'&&liveMembershipChanged)render();
   document.querySelectorAll('[data-match-id]').forEach(card=>{
    const m=M.find(x=>String(x.id)===card.dataset.matchId);if(!m)return;
    let line=card.querySelector('.live-status');
