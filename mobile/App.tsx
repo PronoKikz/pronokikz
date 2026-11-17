@@ -124,9 +124,14 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
   }
   if(m.o25!=null){add('Plus de 2,5 buts',m.o25,m.mkOdds?.totals?.over25);add('Moins de 2,5 buts',1-m.o25,m.mkOdds?.totals?.under25);}
   if(m.btts!=null&&m.btts>0&&m.btts<1){
-   const yes=m.btts>=.5,probability=yes?m.btts:1-m.btts,q=fresh?(yes?m.mkOdds?.btts?.yes:m.mkOdds?.btts?.no):undefined;
-   if(q)add('Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,q);
-   else if(allowEstimated)markets.push({...base,market:'Les 2 équipes marquent : '+(yes?'OUI':'NON'),probability,odds:1/probability,bookmaker:'Estimation du modèle',estimated:true});
+   const options=[
+    {label:'OUI',probability:m.btts,quote:fresh?m.mkOdds?.btts?.yes:undefined},
+    {label:'NON',probability:1-m.btts,quote:fresh?m.mkOdds?.btts?.no:undefined}
+   ];
+   options.forEach(option=>{
+    if(option.quote)add('Les 2 équipes marquent : '+option.label,option.probability,option.quote);
+    else if(allowEstimated)markets.push({...base,market:'Les 2 équipes marquent : '+option.label,probability:option.probability,odds:1/option.probability,bookmaker:'Estimation du modèle',estimated:true});
+   });
   }
   const picks=markets.filter(p=>p.probability>=minProbability&&p.probability<=.94&&Number.isFinite(p.odds)&&p.odds>1);
   if(picks.length)byMatch.push(picks);
