@@ -101,10 +101,27 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
  matches.forEach(m => {
   const [p1,pN,p2]=effective1x2(m),fresh=hasFreshMarketOdds(m,12),base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
   const markets: ComboPick[] = [];
-  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{const selection=market==='Victoire domicile (1)'?'1':market==='Match nul (N)'?'N':market==='Victoire extérieur (2)'?'2':null;const advised=normalizeSelection(m.fin);if(selection&&advised&&!advised.includes(selection))return;if(fresh&&q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt})};
-  add('Victoire domicile (1)',p1,m.mkOdds?.h2h?.home);
-  add('Match nul (N)',pN,m.mkOdds?.h2h?.draw);
-  add('Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away);
+  const advised=normalizeSelection(m.fin);
+  const doubleSelection=advised==='2N'?'N2':advised;
+  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{if(fresh&&q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt})};
+  if(['1N','N2','12'].includes(doubleSelection)){
+   const included=doubleSelection.split('');
+   const probability=(included.includes('1')?p1:0)+(included.includes('N')?pN:0)+(included.includes('2')?p2:0);
+   const quotes=[m.mkOdds?.h2h?.home,m.mkOdds?.h2h?.draw,m.mkOdds?.h2h?.away];
+   const implied=quotes.map(q=>q&&Number.isFinite(q.price)&&q.price>1?1/q.price:0);
+   const overround=implied.reduce((sum,value)=>sum+value,0);
+   const selectedImplied=(included.includes('1')?implied[0]:0)+(included.includes('N')?implied[1]:0)+(included.includes('2')?implied[2]:0);
+   if(fresh&&probability>0&&overround>0&&selectedImplied>0){
+    markets.push({...base,market:'Double chance '+doubleSelection.split('').join('/'),probability,odds:overround/selectedImplied,bookmaker:'Cote estimée depuis le marché 1N2',oddsAt:m.mkOddsAt,estimated:true});
+   }
+  } else {
+   const allowed=!advised||['1','N','2'].includes(advised);
+   if(allowed){
+    add('Victoire domicile (1)',p1,m.mkOdds?.h2h?.home);
+    add('Match nul (N)',pN,m.mkOdds?.h2h?.draw);
+    add('Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away);
+   }
+  }
   if(m.o25!=null){add('Plus de 2,5 buts',m.o25,m.mkOdds?.totals?.over25);add('Moins de 2,5 buts',1-m.o25,m.mkOdds?.totals?.under25);}
   if(m.btts!=null&&m.btts>0&&m.btts<1){
    const yes=m.btts>=.5,probability=yes?m.btts:1-m.btts,q=fresh?(yes?m.mkOdds?.btts?.yes:m.mkOdds?.btts?.no):undefined;
