@@ -101,7 +101,7 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
  matches.forEach(m => {
   const [p1,pN,p2]=effective1x2(m),fresh=hasFreshMarketOdds(m,12),base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
   const markets: ComboPick[] = [];
-  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{const selection=market==='Victoire domicile (1)'?'1':market==='Match nul (N)'?'N':market==='Victoire extérieur (2)'?'2':null;const advised=normalizeSelection(m.fin);if(selection&&advised&&advised!==selection)return;if(fresh&&q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt})};
+  const add=(market:string,probability:number,q?:{price:number;bookmaker:string})=>{const selection=market==='Victoire domicile (1)'?'1':market==='Match nul (N)'?'N':market==='Victoire extérieur (2)'?'2':null;const advised=normalizeSelection(m.fin);if(selection&&advised&&!advised.includes(selection))return;if(fresh&&q&&Number.isFinite(q.price)&&q.price>1)markets.push({...base,market,probability,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt})};
   add('Victoire domicile (1)',p1,m.mkOdds?.h2h?.home);
   add('Match nul (N)',pN,m.mkOdds?.h2h?.draw);
   add('Victoire extérieur (2)',p2,m.mkOdds?.h2h?.away);
