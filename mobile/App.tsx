@@ -134,8 +134,7 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
  if(!valid.size)return null;
  const target=(min+max)/2,ranked=[...valid.values()].sort((a,b)=>b.probability-a.probability||Math.abs(a.odds-target)-Math.abs(b.odds-target));
  // Choisir parmi plusieurs combinaisons valides proches de la cote cible pour que chaque relance puisse réellement varier.
- const pool=ranked.slice(0,Math.min(40,ranked.length));
- return pool[Math.floor(rand()*pool.length)];
+ return ranked[0];
 };
 const buildInstinctPick = (matches: Match[], seed: number): Combo | null => {
  const candidates: ComboPick[] = [];
