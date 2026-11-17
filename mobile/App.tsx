@@ -216,13 +216,14 @@ const buildMyBetCombo = (matches: Match[], seed: number): Combo | null => {
  const candidates:Combo[]=[];
  myBets.sort((a,b)=>b.probability-a.probability);
  for(const my of myBets.slice(0,12)){
-  for(let i=0;i<otherPicks.length;i++){
-   const options=otherPicks[i].filter(p=>p.id!==my.id).sort((a,b)=>b.probability-a.probability);
-   for(const p of options.slice(0,3)){
-    const odds=my.odds*p.odds,prob=my.probability*p.probability;
-    if(odds>=3&&odds<=40)candidates.push({picks:[my,p],odds,probability:prob});
-   }
+  const rankedGroups=otherPicks.map(group=>group.filter(p=>p.id!==my.id).sort((a,b)=>b.probability-a.probability)).filter(group=>group.length).sort((a,b)=>(b[0]?.probability||0)-(a[0]?.probability||0));
+  const picks=[my];let odds=my.odds,probability=my.probability;
+  for(const group of rankedGroups){
+   const pick=group[0];
+   if(!pick||picks.length>=4||odds*pick.odds>40)continue;
+   picks.push(pick);odds*=pick.odds;probability*=pick.probability;
   }
+  if(picks.length>=2&&odds>=3&&odds<=40)candidates.push({picks,odds,probability});
  }
  if(!candidates.length)return null;
  candidates.sort((a,b)=>b.probability-a.probability||a.odds-b.odds);
