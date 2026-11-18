@@ -12,6 +12,7 @@ const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
 const matches = payload.matches || [];
 const SPORT = {
   'Ligue 1':'soccer_france_ligue_one',
+  'Ligue 2':'soccer_france_ligue_two',
   'Premier League':'soccer_epl',
   'Primera Division':'soccer_spain_la_liga',
   'Serie A':'soccer_italy_serie_a',
