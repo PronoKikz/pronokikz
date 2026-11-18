@@ -140,8 +140,17 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
  const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),hourKey=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit'}).format(now),parisWallNow=Date.parse(new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(now).replace(' ','T')+'Z'),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
  const prev=pj.matches||[],hist=pj.hist||[],old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
- const fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
+ let fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
   .filter(f=>CODES.includes(f.competition.code)&&day(new Date(f.utcDate))>=from&&day(new Date(f.utcDate))<=last);
+ // La liste globale /matches peut ne pas remonter la Ligue 2 selon le périmètre
+ // de l'abonnement Football-Data. Interroger aussi directement FL2 et fusionner.
+ try{
+  const fl2=(await get(`/competitions/FL2/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches||[];
+  const inRange=fl2.filter(f=>day(new Date(f.utcDate))>=from&&day(new Date(f.utcDate))<=last);
+  const ids=new Set(fx.map(f=>String(f.id))),missing=inRange.filter(f=>!ids.has(String(f.id)));
+  if(missing.length)fx.push(...missing);
+  console.log('Ligue 2 : '+inRange.length+' rencontres reçues directement, '+missing.length+' ajoutées au flux.');
+ }catch(e){console.log('Ligue 2 : récupération directe indisponible : '+e.message)}
  const st={},sc={},oc={},CAL={},out=[],seen=new Set(),cal=lg=>CAL[lg]||(CAL[lg]=calib(hist,lg));
  const loadStats=async c=>{if(!st[c]){try{await sleep(6500);const cur=(await get('/competitions/'+c+'/matches?status=FINISHED')).matches||[];st[c]=stats(cur);let pm=[];
    try{await sleep(6500);pm=(await get('/competitions/'+c+'/matches?season='+(S-1)+'&status=FINISHED')).matches||[]}catch(e){console.log('saison précédente '+c+' : '+e.message)}
