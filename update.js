@@ -6,9 +6,9 @@
 // Absences, enjeux : ajustés à la main dans expert.js (champ aj).
 try { require('dotenv').config(); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 const fs=require('fs');
-const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.ODDS_API_KEY,CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(',');
+const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.ODDS_API_KEY,CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(','),'FL2'])];
 if(!K){console.error('Clé Football Data manquante : renseigne FOOTBALL_DATA_API_KEY (ou FOOTBALL_DATA_KEY) dans .env ou dans les secrets GitHub.');process.exit(1)}
-const SPORT={FL1:'soccer_france_ligue_one',PL:'soccer_epl',PD:'soccer_spain_la_liga',SA:'soccer_italy_serie_a',BL1:'soccer_germany_bundesliga',CL:'soccer_uefa_champs_league',PPL:'soccer_portugal_primeira_liga',DED:'soccer_netherlands_eredivisie',ELC:'soccer_efl_champ',UWCL:'soccer_uefa_champs_league_women',NATIONS:'soccer_uefa_nations_league'};
+const SPORT={FL1:'soccer_france_ligue_one',FL2:'soccer_france_ligue_two',PL:'soccer_epl',PD:'soccer_spain_la_liga',SA:'soccer_italy_serie_a',BL1:'soccer_germany_bundesliga',CL:'soccer_uefa_champs_league',PPL:'soccer_portugal_primeira_liga',DED:'soccer_netherlands_eredivisie',ELC:'soccer_efl_champ',UWCL:'soccer_uefa_champs_league_women',NATIONS:'soccer_uefa_nations_league'};
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tz={timeZone:'Europe/Paris'},day=d=>new Intl.DateTimeFormat('en-CA',tz).format(d),off=n=>new Date(Date.now()+n*864e5);
