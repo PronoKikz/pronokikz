@@ -187,6 +187,42 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null,
    liveStatus:f.status,liveScore,liveMinute:f.minute??null,liveAdded:f.injuryTime??null,
    liveUpdatedAt:new Date().toISOString(),liveSource:'football-data.org'});seen.add(f.id)}
+ // Ligue 2 : secours ESPN, l'accès Football-Data à FL2 renvoie 403 avec la clé actuelle.
+ try{
+  const dates=Array.from({length:53},(_,i)=>day(off(i-45)).replace(/-/g,''));
+  const packs=await Promise.all(dates.map(async date=>{try{
+   const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fra.2/scoreboard?dates='+date);
+   if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();return j.events||[];
+  }catch(e){console.log('Ligue 2 ESPN '+date+' : '+e.message);return []}}));
+  const events=[...new Map(packs.flat().map(e=>[String(e.id),e])).values()];
+  const parsed=events.map(e=>{const c=(e.competitions||[])[0],ts=c&&c.competitors||[],h=ts.find(t=>t.homeAway==='home'),a=ts.find(t=>t.homeAway==='away'),s=(c&&c.status&&c.status.type)||(e.status&&e.status.type)||{};
+   if(!h||!a||!h.team||!a.team||!e.date)return null;
+   return {e,h,a,done:!!s.completed,hs:h.score==null?null:Number(h.score),as:a.score==null?null:Number(a.score),date:new Date(e.date),hid:String(h.team.id),aid:String(a.team.id),hn:h.team.displayName||h.team.name,an:a.team.displayName||a.team.name};
+  }).filter(x=>x&&Number.isFinite(x.date.getTime()));
+  const T={},team=id=>T[id]||(T[id]={w:0,gf:0,ga:0,pts:0,hw:0,hgf:0,hga:0,hpts:0,aw:0,agf:0,aga:0,apts:0,last:[],lastDate:0,g:0});
+  let sh=0,sa=0,sw=0;const meets=[];
+  parsed.filter(e=>e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)).sort((a,b)=>a.date-b.date).forEach(e=>{
+   const H=team(e.hid),A=team(e.aid),ph=e.hs>e.as?3:e.hs===e.as?1:0,pa=e.as>e.hs?3:e.as===e.hs?1:0,t=e.date.getTime();
+   Object.assign(H,{w:H.w+1,gf:H.gf+e.hs,ga:H.ga+e.as,pts:H.pts+ph,hw:H.hw+1,hgf:H.hgf+e.hs,hga:H.hga+e.as,hpts:H.hpts+ph,last:[...H.last,ph],lastDate:t,g:H.g+1});
+   Object.assign(A,{w:A.w+1,gf:A.gf+e.as,ga:A.ga+e.hs,pts:A.pts+pa,aw:A.aw+1,agf:A.agf+e.as,aga:A.aga+e.hs,apts:A.apts+pa,last:[...A.last,pa],lastDate:t,g:A.g+1});
+   sh+=e.hs;sa+=e.as;sw++;meets.push({h:e.hid,a:e.aid,hg:e.hs,ag:e.as,t});
+  });
+  const avg={h:sw?sh/sw:1.35,a:sw?sa/sw:1.1},lgOdds=OD?await oddsFor('FL2').catch(e=>{console.log('Cotes Ligue 2 : '+e.message);return[]}):[];
+  const oldFl2=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('fl2-espn-')).map(m=>[String(m.id),m]));let added=0;
+  for(const e of parsed){const d=day(e.date);if(d<from||d>last)continue;
+   const id='fl2-espn-'+e.e.id,oldFl=oldFl2[id],started=e.date.getTime()<=Date.now()||e.done;if(started&&!oldFl)continue;
+   const blank=()=>({w:0,gf:0,ga:0,pts:0,hw:0,hgf:0,hga:0,hpts:0,aw:0,agf:0,aga:0,apts:0,last:[],lastDate:0,g:0});
+   const H=T[e.hid]||blank(),A=T[e.aid]||blank(),px=predict(H,A,avg,e.date.getTime(),h2h(meets,e.hid,e.aid),cal('Ligue 2'));
+   const score=e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)?[e.hs,e.as]:null;
+   let m={id,lg:'Ligue 2',home:e.hn,away:e.an,d,h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(e.date),hc:e.h.team.logo||'',ac:e.a.team.logo||'',
+    p1:r3(px.p1),pN:r3(px.pN),p2:r3(px.p2),btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,fm:px.fm,f10:px.f10,ng:px.ng,hh:px.hh,x:px.x,r:score,lock:started?1:0,
+    ia:'Pronostic Ligue 2 via ESPN : forme récente, buts marqués/encaissés et avantage domicile.'+(Math.min(H.g,A.g)<3?' Échantillon limité.':''),pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]};
+   if(started&&oldFl)m={...m,...oldFl,d,h:m.h,r:score||oldFl.r||null,lock:1};
+   else{const ev=lgOdds.find(q=>same(q.h,e.hn)&&same(q.a,e.an));if(ev)m=blendMarketOdds(m,ev,.85);m=applyExperts(m)}
+   out.push(m);seen.add(id);added++;
+  }
+  console.log('Ligue 2 ESPN : '+parsed.length+' événements, '+sw+' matchs de forme, '+added+' matchs ajoutés.');
+ }catch(e){console.log('Ligue 2 ESPN indisponible : '+e.message)}
  // Ligue des champions féminine UEFA : calendrier et résultats via le scoreboard ESPN.
  // Les matchs sont ajoutés au flux principal avec un modèle statistique dédié à la compétition.
  try {
