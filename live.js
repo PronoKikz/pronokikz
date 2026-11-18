@@ -6,7 +6,7 @@
 const fs=require('fs');
 const K=process.env.FOOTBALL_DATA_API_KEY||process.env.FOOTBALL_DATA_KEY;
 if(!K)console.log('Clé Football Data absente : ESPN et MatchEnDirect restent actifs en secours.');
-const CODES=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(',').map(x=>x.trim()).filter(Boolean);
+const CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(',').map(x=>x.trim()).filter(Boolean),'FL2'])];
 const get=async(path)=>{if(!K)throw new Error('Clé Football Data absente');const r=await fetch('https://api.football-data.org/v4'+path,{headers:{'X-Auth-Token':K}});if(!r.ok)throw new Error(path+' -> '+r.status);return r.json()};
 const day=(n)=>{const d=new Date(Date.now()+n*864e5);return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(d)};
 const espnDay=(n)=>day(n).replace(/-/g,'');
