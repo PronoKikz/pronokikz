@@ -15,7 +15,7 @@ jobs:
   build-ios:
     # A macOS runner is required to compile a real iPhone device app.
     # Signing is intentionally disabled; AltStore signs the IPA on the user's device.
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
