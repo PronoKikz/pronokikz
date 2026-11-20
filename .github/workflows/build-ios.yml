@@ -9,11 +9,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-ios:
-    runs-on: macos-15
+    # EAS compiles iOS in Expo's cloud; this avoids waiting for a GitHub macOS runner.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,39 +26,46 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - name: Install JavaScript dependencies
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
         working-directory: mobile
         run: npm ci
 
-      - name: Generate the native iOS project
+      - name: Build signed iOS IPA with EAS
         working-directory: mobile
-        run: npx expo prebuild --platform ios --clean --no-install
+        run: eas build --platform ios --profile production --non-interactive --wait --json > ../eas-ios-build.json
 
-      - name: Install CocoaPods dependencies
+      - name: Download generated IPA
         working-directory: mobile
-        run: pod install --project-directory=ios
-
-      - name: Build an unsigned iPhone app
-        working-directory: mobile
-        shell: bash
         run: |
-          set -euo pipefail
-          WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)
-          if [ -z "$WORKSPACE" ]; then echo 'Xcode workspace not found'; exit 1; fi
-          SCHEME=$(xcodebuild -list -json -workspace "$WORKSPACE" | jq -r '.workspace.schemes[0]')
-          if [ -z "$SCHEME" ] || [ "$SCHEME" = "null" ]; then echo 'Xcode scheme not found'; exit 1; fi
-          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-          APP_PATH="build/Build/Products/Release-iphoneos/${SCHEME}.app"
-          if [ ! -d "$APP_PATH" ]; then echo "Built app not found: $APP_PATH"; find build/Build/Products -maxdepth 3 -name '*.app' -print; exit 1; fi
-          mkdir -p package/Payload
-          cp -R "$APP_PATH" package/Payload/
-          cd package
-          /usr/bin/zip -qry ../Pronokikz-unsigned.ipa Payload
+          BUILD_ID="$(node -e "const b=require('../eas-ios-build.json'); const x=Array.isArray(b)?b[0]:b; if(!x.id) process.exit(1); process.stdout.write(x.id)")"
+          eas build:download --build-id "$BUILD_ID" --non-interactive --json > ./eas-ios-download.json
+          IPA_PATH="$(node -e "const d=require('./eas-ios-download.json'); if(!d.path) process.exit(1); process.stdout.write(d.path)")"
+          test -f "$IPA_PATH"
+          cp "$IPA_PATH" ../Pronokikz.ipa
+          test -s ../Pronokikz.ipa
 
-      - name: Upload unsigned IPA
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Pronokikz-unsigned-IPA
-          path: mobile/Pronokikz-unsigned.ipa
+          name: Pronokikz-iOS-IPA
+          path: Pronokikz.ipa
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Publish IPA release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ github.run_number }}
+          name: Pronokikz iPhone - build ${{ github.run_number }}
+          body: |
+            Fichier IPA Pronokikz compilé pour iOS.
+
+            L'installation directe dépend de la signature Apple et du profil de provisionnement associé.
+          files: Pronokikz.ipa
+          make_latest: false
