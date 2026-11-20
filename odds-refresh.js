@@ -19,7 +19,6 @@ const SPORT = {
   'UEFA Champions League':'soccer_uefa_champs_league',
   'Primeira Liga':'soccer_portugal_primeira_liga',
   'Eredivisie':'soccer_netherlands_eredivisie',
-  'Championship':'soccer_efl_champ',
   'Ligue des champions féminine':'soccer_uefa_champs_league_women',
   'Ligue des nations UEFA':'soccer_uefa_nations_league'
 };
