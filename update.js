@@ -219,7 +219,16 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    const la=clamp(priorA+(px.x[1]-priorA)*weight,.45,2.35);
    return {...model(lh,la),x:[r3(lh),r3(la)],sample:n,weight:r3(weight)};
   };
-  const oldFl2=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('fl2-espn-')).map(m=>[String(m.id),m]));let added=0;
+  const oldFl2=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('fl2-espn-')).map(m=>[String(m.id),m]));let added=0,fl2MarketMatched=0;
+  // Les noms d'équipes peuvent différer entre ESPN et The Odds API, ou l'ordre domicile/extérieur être inversé.
+  const findFl2Odds=(home,away)=>{
+   const direct=lgOdds.find(q=>same(q.h,home)&&same(q.a,away));
+   if(direct)return direct;
+   const reverse=lgOdds.find(q=>same(q.h,away)&&same(q.a,home));
+   if(!reverse)return null;
+   const quotes=reverse.quotes?{...reverse.quotes,h2h:reverse.quotes.h2h?{home:reverse.quotes.h2h.away,draw:reverse.quotes.h2h.draw,away:reverse.quotes.h2h.home}:reverse.quotes.h2h}:null;
+   return {...reverse,h:home,a:away,p:reverse.p?[reverse.p[2],reverse.p[1],reverse.p[0]]:null,quotes};
+  };
   for(const e of parsed){const d=day(e.date);if(d<from||d>last)continue;
    const id='fl2-espn-'+e.e.id,oldFl=oldFl2[id],started=e.date.getTime()<=Date.now()||e.done;if(started&&!oldFl)continue;
    const blank=()=>({w:0,gf:0,ga:0,pts:0,hw:0,hgf:0,hga:0,hpts:0,aw:0,agf:0,aga:0,apts:0,last:[],lastDate:0,g:0});
@@ -229,10 +238,10 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     p1:r3(px.p1),pN:r3(px.pN),p2:r3(px.p2),btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,fm:px.fm,f10:px.f10,ng:px.ng,hh:px.hh,x:px.x,r:score,lock:started?1:0,
     ia:'Pronostic Ligue 2 via ESPN : forme récente, buts marqués/encaissés et avantage domicile. Buts attendus lissés selon '+px.sample+' matchs récents.'+(Math.min(H.g,A.g)<6?' Échantillon court : probabilité ramenée vers la moyenne du championnat.':'')+(OD?' Cotes bookmakers intégrées uniquement si disponibles.':' Cotes bookmakers indisponibles : estimation statistique prudente.'),pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]};
    if(started&&oldFl)m={...m,...oldFl,d,h:m.h,r:score||oldFl.r||null,lock:1};
-   else{const ev=lgOdds.find(q=>same(q.h,e.hn)&&same(q.a,e.an));if(ev)m=blendMarketOdds(m,ev,.85);m=applyExperts(m)}
+   else{const ev=findFl2Odds(e.hn,e.an);if(ev){m=blendMarketOdds(m,ev,.85);fl2MarketMatched++}else{m={...m,marketStatus:OD?'unmatched':'missing_api_key',ia:m.ia+' ATTENTION : aucune cote bookmaker 1N2 récupérée pour ce match ; probabilité issue du modèle statistique seul, confiance réduite.'}}m=applyExperts(m)}
    out.push(m);seen.add(id);added++;
   }
-  console.log('Ligue 2 ESPN : '+parsed.length+' événements, '+sw+' matchs de forme, '+added+' matchs ajoutés.');
+  console.log('Ligue 2 ESPN : '+parsed.length+' événements, '+sw+' matchs de forme, '+added+' matchs ajoutés, '+fl2MarketMatched+' marchés bookmakers associés sur '+added+' matchs. Clé ODDS_API_KEY '+(OD?'présente':'absente')+'.');
  }catch(e){console.log('Ligue 2 ESPN indisponible : '+e.message)}
  // Ligue des champions féminine UEFA : calendrier et résultats via le scoreboard ESPN.
  // Les matchs sont ajoutés au flux principal avec un modèle statistique dédié à la compétition.
