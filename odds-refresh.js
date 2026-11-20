@@ -29,6 +29,14 @@ const wall = new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Paris',year:'num
 const wallNow = Date.parse(wall);
 const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 const same = (a,b) => { const x=norm(a),y=norm(b); return !!x&&!!y&&(x.includes(y)||y.includes(x)); };
+function findOddsMatch(events,home,away) {
+  const direct=events.find(e=>same(e.h,home)&&same(e.a,away));
+  if(direct)return direct;
+  const reverse=events.find(e=>same(e.h,away)&&same(e.a,home));
+  if(!reverse)return null;
+  return {...reverse,h:home,a:away,p:Array.isArray(reverse.p)?[reverse.p[2],reverse.p[1],reverse.p[0]]:reverse.p,
+    quotes:reverse.quotes?{h2h:reverse.quotes.h2h?{home:reverse.quotes.h2h.away,draw:reverse.quotes.h2h.draw,away:reverse.quotes.h2h.home}:reverse.quotes.h2h,totals:reverse.quotes.totals}:reverse.quotes};
+}
 const due = matches.filter(m => {
   if (m.lock || m.r || !m.d || !m.h || !SPORT[m.lg]) return false;
   const kickoff = Date.parse(m.d+'T'+m.h+':00Z');
@@ -70,7 +78,7 @@ for (const league of leagues) {
   try {
     const events=(await fetchOdds(league)).map(marketEvent);
     for (const m of due.filter(x=>x.lg===league)) {
-      const ev=events.find(e=>(same(e.h,m.home))&&(same(e.a,m.away)));
+      const ev=findOddsMatch(events,m.home,m.away);
       if(!ev) { console.log('Pas de cote correspondante : '+m.home+' - '+m.away); continue; }
       m.mkOdds=ev.quotes; m.mkOddsAt=ev.oddsAt;
       if(ev.p) {
