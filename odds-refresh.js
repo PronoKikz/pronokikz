@@ -1,4 +1,5 @@
 // Actualisation légère des cotes uniquement, sans recalculer tous les pronostics.
+// Le connecteur APIFootball limite get_odds à cinq jours ; voir apifootball-odds.js.
 const fs = require('fs');
 
 (async () => {
@@ -45,7 +46,6 @@ const due = matches.filter(m => {
   return !Number.isFinite(last) || now-last >= interval-30000;
 });
 if (!due.length) { console.log('Aucun match dans la fenêtre de 24 h nécessitant une actualisation des cotes.'); process.exit(0); }
-const leagues = [...new Set(due.map(m=>m.lg))];
 let apifootballOddsPromise=null;
 async function fetchOdds() {
   if(!apifootballOddsPromise)apifootballOddsPromise=require('./apifootball-odds').fetchOdds(OD);
