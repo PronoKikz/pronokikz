@@ -155,14 +155,14 @@ const toEspnMatch=(event,prefix)=>{
  const nowKey=parisNow.year+'-'+parisNow.month+'-'+parisNow.day+'T'+parisNow.hour+':'+parisNow.minute;
  const beforeKickoff=m=>!!(m&&m.d&&m.h&&String(m.d)+'T'+String(m.h).slice(0,5)>nowKey);
  const parisNowMs=Date.UTC(Number(parisNow.year),Number(parisNow.month)-1,Number(parisNow.day),Number(parisNow.hour),Number(parisNow.minute));
- // Filet de sécurité : un match encore marqué live plus de 2 h 15 après
+ // Filet de sécurité : un match encore marqué live plus de 1 h 50 après
  // son coup d'envoi local est clôturé si le fournisseur tarde à envoyer le FT.
  const afterExpectedEnd=m=>{
   if(!m||!m.d||!m.h)return false;
   const [y,mo,d]=String(m.d).split('-').map(Number);
   const [hh,mm]=String(m.h).slice(0,5).split(':').map(Number);
   if(!y||!mo||!d||!Number.isFinite(hh)||!Number.isFinite(mm))return false;
-  return parisNowMs>=Date.UTC(y,mo-1,d,hh,mm)+135*60000;
+  return parisNowMs>=Date.UTC(y,mo-1,d,hh,mm)+110*60000;
  };
  const impossibleBeforeKickoff=['IN_PLAY','PAUSED','FINISHED'];
  // Un score final déjà enregistré (notamment le 5-0 Allemagne–Pays-Bas) est prioritaire sur tout ancien statut live.
