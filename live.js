@@ -154,6 +154,16 @@ const toEspnMatch=(event,prefix)=>{
  const parisNow=parisParts.filter(p=>['year','month','day','hour','minute'].includes(p.type)).reduce((o,p)=>(o[p.type]=p.value,o),{});
  const nowKey=parisNow.year+'-'+parisNow.month+'-'+parisNow.day+'T'+parisNow.hour+':'+parisNow.minute;
  const beforeKickoff=m=>!!(m&&m.d&&m.h&&String(m.d)+'T'+String(m.h).slice(0,5)>nowKey);
+ const parisNowMs=Date.UTC(Number(parisNow.year),Number(parisNow.month)-1,Number(parisNow.day),Number(parisNow.hour),Number(parisNow.minute));
+ // Filet de sécurité : un match encore marqué live plus de 2 h 15 après
+ // son coup d'envoi local est clôturé si le fournisseur tarde à envoyer le FT.
+ const afterExpectedEnd=m=>{
+  if(!m||!m.d||!m.h)return false;
+  const [y,mo,d]=String(m.d).split('-').map(Number);
+  const [hh,mm]=String(m.h).slice(0,5).split(':').map(Number);
+  if(!y||!mo||!d||!Number.isFinite(hh)||!Number.isFinite(mm))return false;
+  return parisNowMs>=Date.UTC(y,mo-1,d,hh,mm)+135*60000;
+ };
  const impossibleBeforeKickoff=['IN_PLAY','PAUSED','FINISHED'];
  // Un score final déjà enregistré (notamment le 5-0 Allemagne–Pays-Bas) est prioritaire sur tout ancien statut live.
  // Cela empêche un match terminé de rester bloqué sur MI-TEMPS si une source
@@ -166,6 +176,14 @@ const toEspnMatch=(event,prefix)=>{
     m.liveStatus='FINISHED';m.liveScore=finalScore;m.liveMinute=null;m.liveAdded=null;
     m.liveUpdatedAt=new Date().toISOString();changed++;
    }
+  }
+ }
+ // Clôture les statuts live persistants après la durée maximale de sécurité.
+ for(const m of matches){
+  if(afterExpectedEnd(m)&&['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus)){
+   if(Array.isArray(m.liveScore)&&m.liveScore.length===2&&m.liveScore.every(Number.isFinite))m.r=[...m.liveScore];
+   m.liveStatus='FINISHED';m.liveMinute=null;m.liveAdded=null;
+   m.liveUpdatedAt=new Date().toISOString();changed++;
   }
  }
  // Efface un état live trop ancien si aucune source ne confirme encore le match.
@@ -191,7 +209,8 @@ const toEspnMatch=(event,prefix)=>{
   tracked++;
   const rawScore=f.score&&f.score.fullTime;
   const liveScore=rawScore&&Number.isFinite(rawScore.home)&&Number.isFinite(rawScore.away)?[rawScore.home,rawScore.away]:null;
-  const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null,status=f.status||null;
+  const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null;let status=f.status||null;
+  if(afterExpectedEnd(m)&&['IN_PLAY','PAUSED','SUSPENDED'].includes(status))status='FINISHED';
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
   const sourcePriority={'MatchEnDirect':1,'ESPN':2,'Football-Data':3};
   const incomingPriority=sourcePriority[f.source]||0,currentPriority=sourcePriority[m.liveSource]||0;
