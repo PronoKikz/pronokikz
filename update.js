@@ -6,7 +6,7 @@
 // Absences, enjeux : ajustés à la main dans expert.js (champ aj).
 try { require('dotenv').config(); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 const fs=require('fs');
-const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.ODDS_API_KEY,CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(','),'FL2'])];
+const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.APIFOOTBALL_API_KEY,CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED,ELC').split(','),'FL2'])];
 if(!K){console.error('Clé Football Data manquante : renseigne FOOTBALL_DATA_API_KEY (ou FOOTBALL_DATA_KEY) dans .env ou dans les secrets GitHub.');process.exit(1)}
 const SPORT={FL1:'soccer_france_ligue_one',FL2:'soccer_france_ligue_two',PL:'soccer_epl',PD:'soccer_spain_la_liga',SA:'soccer_italy_serie_a',BL1:'soccer_germany_bundesliga',CL:'soccer_uefa_champs_league',PPL:'soccer_portugal_primeira_liga',DED:'soccer_netherlands_eredivisie',ELC:'soccer_efl_champ',UWCL:'soccer_uefa_champs_league_women',NATIONS:'soccer_uefa_nations_league'};
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
@@ -84,38 +84,11 @@ function aggregate(hist){const z=()=>({n:0,h:0,b:0,no:0,o:0,br:0,ll:0}),G={tot:z
   const k=mx<.45?'moins de 45 %':mx<=.6?'45 à 60 %':'plus de 60 %';G.bk[k].n++;G.bk[k].h+=hit;
   e.p.forEach((p,i)=>{const c=cal.find(c=>p>=c.a&&p<c.b);if(c){c.n++;c.sp+=p;c.h+=i===o?1:0}})});
  G.cal=cal.filter(c=>c.n>0).map(c=>({a:c.a,b:c.b,n:c.n,p:r3(c.sp/c.n),f:r3(c.h/c.n)}));return G}
+let apifootballOddsPromise=null;
 async function oddsFor(code){
- const markets=code==='NATIONS'?'h2h':'h2h,totals';
- const res=await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT[code]}/odds/?apiKey=${OD}&regions=eu&markets=${markets}&oddsFormat=decimal`);
- if(!res.ok)throw new Error('odds '+code+' -> '+res.status);
- return(await res.json()).map(e=>{
-  const acc={p:[0,0,0],n:0,o:0,on:0};
-  const best={h2h:{},totals:{}};
-  const save=(slot,outcome,price,bookmaker)=>{
-   if(!Number.isFinite(price)||price<=1)return;
-   if(!best[slot][outcome]||price>best[slot][outcome].price)best[slot][outcome]={price,bookmaker};
-  };
-  (e.bookmakers||[]).forEach(b=>(b.markets||[]).forEach(mk=>{
-   if(mk.key==='h2h'){
-    const getOutcome=name=>mk.outcomes.find(o=>o.name===name);
-    const home=getOutcome(e.home_team),draw=getOutcome('Draw'),away=getOutcome(e.away_team);
-    const a=[home,draw,away].map(o=>o&&o.price?1/o.price:0),total=a[0]+a[1]+a[2];
-    if(total&&a.every(Boolean)){for(let i=0;i<3;i++)acc.p[i]+=a[i]/total;acc.n++}
-    save('h2h','home',home&&home.price,b.title);
-    save('h2h','draw',draw&&draw.price,b.title);
-    save('h2h','away',away&&away.price,b.title);
-   }
-   if(mk.key==='totals'){
-    const over=mk.outcomes.find(o=>o.name==='Over'&&o.point===2.5);
-    const under=mk.outcomes.find(o=>o.name==='Under'&&o.point===2.5);
-    if(over&&under){acc.o+=(1/over.price)/(1/over.price+1/under.price);acc.on++}
-    save('totals','over25',over&&over.price,b.title);
-    save('totals','under25',under&&under.price,b.title);
-   }
-  }));
-  return{h:e.home_team,a:e.away_team,p:acc.n?acc.p.map(x=>x/acc.n):null,o:acc.on?acc.o/acc.on:null,
-   quotes:{h2h:best.h2h,totals:best.totals},oddsAt:new Date().toISOString()};
- });
+ if(!OD)return [];
+ if(!apifootballOddsPromise)apifootballOddsPromise=require('./apifootball-odds').fetchOdds(OD);
+ return apifootballOddsPromise;
 }
 // Mélange les probabilités du modèle avec les probabilités implicites du marché.
  // Le marché p est déjà normalisé sans marge bookmaker dans oddsFor().
@@ -228,7 +201,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    return {...model(lh,la),x:[r3(lh),r3(la)],sample:n,weight:r3(weight)};
   };
   const oldFl2=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('fl2-espn-')).map(m=>[String(m.id),m]));let added=0,fl2MarketMatched=0;
-  // Les noms d'équipes peuvent différer entre ESPN et The Odds API, ou l'ordre domicile/extérieur être inversé.
+  // Les noms d'équipes peuvent différer entre ESPN et APIFootball, ou l'ordre domicile/extérieur être inversé.
   const findFl2Odds=(home,away)=>{
    const direct=lgOdds.find(q=>same(q.h,home)&&same(q.a,away));
    if(direct)return direct;
@@ -249,7 +222,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    else{const ev=findFl2Odds(e.hn,e.an);if(ev){m=blendMarketOdds(m,ev,.85);fl2MarketMatched++}else{m={...m,marketStatus:OD?'unmatched':'missing_api_key',ia:m.ia+' ATTENTION : aucune cote bookmaker 1N2 récupérée pour ce match ; probabilité issue du modèle statistique seul, confiance réduite.'}}m=applyExperts(m)}
    out.push(m);seen.add(id);added++;
   }
-  console.log('Ligue 2 ESPN : '+parsed.length+' événements, '+sw+' matchs de forme, '+added+' matchs ajoutés, '+fl2MarketMatched+' marchés bookmakers associés sur '+added+' matchs. Clé ODDS_API_KEY '+(OD?'présente':'absente')+'.');
+  console.log('Ligue 2 ESPN : '+parsed.length+' événements, '+sw+' matchs de forme, '+added+' matchs ajoutés, '+fl2MarketMatched+' marchés bookmakers associés sur '+added+' matchs. Clé APIFOOTBALL_API_KEY '+(OD?'présente':'absente')+'.');
  }catch(e){console.log('Ligue 2 ESPN indisponible : '+e.message)}
  // Ligue des champions féminine UEFA : calendrier et résultats via le scoreboard ESPN.
  // Les matchs sont ajoutés au flux principal avec un modèle statistique dédié à la compétition.
@@ -362,7 +335,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
   });
   const avgGoals=teamGames?goals/teamGames:1.25;
   const nationsOld=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('nations-')).map(m=>[String(m.id),m]));
-  let nationsOdds=[];if(OD){try{nationsOdds=await oddsFor('NATIONS');console.log('Cotes Nations :',nationsOdds.length,'événements reçus ;',parsed.filter(e=>nationsOdds.some(q=>same(q.h,e.homeName)&&same(q.a,e.awayName))).length,'correspondances ESPN ; exemples API :',nationsOdds.slice(0,5).map(q=>q.h+' - '+q.a).join(' | '))}catch(e){console.log('cotes Nations : '+e.message)}}else{console.log('Cotes Nations : ODDS_API_KEY absente')}
+  let nationsOdds=[];if(OD){try{nationsOdds=await oddsFor('NATIONS');console.log('Cotes Nations :',nationsOdds.length,'événements reçus ;',parsed.filter(e=>nationsOdds.some(q=>same(q.h,e.homeName)&&same(q.a,e.awayName))).length,'correspondances ESPN ; exemples API :',nationsOdds.slice(0,5).map(q=>q.h+' - '+q.a).join(' | '))}catch(e){console.log('cotes Nations : '+e.message)}}else{console.log('Cotes Nations : APIFOOTBALL_API_KEY absente')}
   for(const e of parsed){
    const d=day(e.date);
    if(d<day(off(-14))||d>day(off(30)))continue;
