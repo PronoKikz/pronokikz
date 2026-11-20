@@ -13,7 +13,8 @@ async function api(action,key,from,to){
  return data;
 }
 async function fetchOdds(key){
- const from=dateParis(),to=plusDays(from,7);
+ // APIFootball limite la période de get_odds à cinq jours maximum.
+ const from=dateParis(),to=plusDays(from,4);
  const [fixtures,rows]=await Promise.all([api('get_events',key,from,to),api('get_odds',key,from,to)]);
  const fixtureMap=new Map(fixtures.map(f=>[String(f.match_id),f])),grouped=new Map();
  for(const row of rows){const id=String(row.match_id||'');if(!id||!fixtureMap.has(id))continue;if(!grouped.has(id))grouped.set(id,[]);grouped.get(id).push(row);}
