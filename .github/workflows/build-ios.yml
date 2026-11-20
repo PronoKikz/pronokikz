@@ -1,6 +1,11 @@
 name: Build Pronokikz for iOS
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/build-ios.yml'
   workflow_dispatch:
 
 permissions:
@@ -8,7 +13,7 @@ permissions:
 
 jobs:
   build-ios:
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,16 +25,39 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - name: Set up Expo and EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
+      - name: Install JavaScript dependencies
         working-directory: mobile
         run: npm ci
 
-      - name: Build iOS app with EAS
+      - name: Generate the native iOS project
         working-directory: mobile
-        run: eas build --platform ios --profile production --non-interactive --wait
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Install CocoaPods dependencies
+        working-directory: mobile
+        run: pod install --project-directory=ios
+
+      - name: Build an unsigned iPhone app
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)
+          if [ -z "$WORKSPACE" ]; then echo 'Xcode workspace not found'; exit 1; fi
+          SCHEME=$(xcodebuild -list -json -workspace "$WORKSPACE" | jq -r '.workspace.schemes[0]')
+          if [ -z "$SCHEME" ] || [ "$SCHEME" = "null" ]; then echo 'Xcode scheme not found'; exit 1; fi
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          APP_PATH="build/Build/Products/Release-iphoneos/${SCHEME}.app"
+          if [ ! -d "$APP_PATH" ]; then echo "Built app not found: $APP_PATH"; find build/Build/Products -maxdepth 3 -name '*.app' -print; exit 1; fi
+          mkdir -p package/Payload
+          cp -R "$APP_PATH" package/Payload/
+          cd package
+          /usr/bin/zip -qry ../Pronokikz-unsigned.ipa Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pronokikz-unsigned-IPA
+          path: mobile/Pronokikz-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
