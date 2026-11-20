@@ -28,6 +28,14 @@ const teamAliases={
 };
 const nz=s=>{const v=String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');return teamAliases[v]||v};
 const same=(a,b)=>{a=nz(a);b=nz(b);return !!a&&!!b&&(a.includes(b)||b.includes(a))};
+function findOddsMatch(events,home,away){
+ const direct=events.find(e=>same(e.h,home)&&same(e.a,away));
+ if(direct)return direct;
+ const reverse=events.find(e=>same(e.h,away)&&same(e.a,home));
+ if(!reverse)return null;
+ return {...reverse,h:home,a:away,p:Array.isArray(reverse.p)?[reverse.p[2],reverse.p[1],reverse.p[0]]:reverse.p,
+  quotes:reverse.quotes?{h2h:reverse.quotes.h2h?{home:reverse.quotes.h2h.away,draw:reverse.quotes.h2h.draw,away:reverse.quotes.h2h.home}:reverse.quotes.h2h,totals:reverse.quotes.totals}:reverse.quotes};
+}
 const { model } = require('./predictor');
 
 const r3=x=>Math.round(x*1000)/1000,r=(x,y)=>y?x/y:0,sum=a=>a.reduce((s,v)=>s+v,0);
@@ -173,7 +181,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    const kickoff=Date.parse(m.d+'T'+m.h+':00Z'),minutesToKickoff=(kickoff-parisWallNow)/60000,refreshKey=minutesToKickoff>=0&&minutesToKickoff<=90?'pre-'+Math.floor(now.getTime()/600000):'hour-'+hourKey;
    if(OD&&SPORT[c]&&m.mkAt!==refreshKey){
     if(!oc[c]){try{oc[c]=await oddsFor(c)}catch(e){console.log(e.message);oc[c]=[]}}
-    const ev=oc[c].find(e=>(same(e.h,f.homeTeam.name)||same(e.h,f.homeTeam.shortName))&&(same(e.a,f.awayTeam.name)||same(e.a,f.awayTeam.shortName)));
+    const ev=findOddsMatch(oc[c],f.homeTeam.name||f.homeTeam.shortName,f.awayTeam.name||f.awayTeam.shortName);
     m={...m,mkAt:refreshKey};
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
@@ -311,7 +319,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    if(started&&oldW){
     m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:1};
    } else {
-    const ev=uwclOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
+    const ev=findOddsMatch(uwclOdds,e.homeName,e.awayName);
     if(ev)m=blendMarketOdds(m,ev,.85);
     m=applyExperts(m);
    }
@@ -389,7 +397,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
      m.liveUpdatedAt=new Date().toISOString();m.liveSource='ESPN';
     }
    } else {
-    const ev=nationsOdds.find(q=>(same(q.h,e.homeName))&&(same(q.a,e.awayName)));
+    const ev=findOddsMatch(nationsOdds,e.homeName,e.awayName);
     if(ev)m=blendMarketOdds(m,ev,.85);
     m=applyExperts(m);
    }
