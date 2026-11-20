@@ -208,15 +208,26 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    sh+=e.hs;sa+=e.as;sw++;meets.push({h:e.hid,a:e.aid,hg:e.hs,ag:e.as,t});
   });
   const avg={h:sw?sh/sw:1.35,a:sw?sa/sw:1.1},lgOdds=OD?await oddsFor('FL2').catch(e=>{console.log('Cotes Ligue 2 : '+e.message);return[]}):[];
+  // Ligue 2 ESPN : les données disponibles ne couvrent qu'une fenêtre récente.
+  // On ramène donc les buts attendus vers la moyenne du championnat selon la taille
+  // réelle de l'échantillon, pour éviter qu'une série de 5 matchs crée un faux 75 %.
+  const stabilizeFl2=(px,H,A)=>{
+   const n=Math.min(H.g||0,A.g||0),weight=n/(n+6);
+   const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+   const priorH=avg.h||1.35,priorA=avg.a||1.1;
+   const lh=clamp(priorH+(px.x[0]-priorH)*weight,.55,2.35);
+   const la=clamp(priorA+(px.x[1]-priorA)*weight,.45,2.35);
+   return {...model(lh,la),x:[r3(lh),r3(la)],sample:n,weight:r3(weight)};
+  };
   const oldFl2=Object.fromEntries(prev.filter(m=>String(m.id).startsWith('fl2-espn-')).map(m=>[String(m.id),m]));let added=0;
   for(const e of parsed){const d=day(e.date);if(d<from||d>last)continue;
    const id='fl2-espn-'+e.e.id,oldFl=oldFl2[id],started=e.date.getTime()<=Date.now()||e.done;if(started&&!oldFl)continue;
    const blank=()=>({w:0,gf:0,ga:0,pts:0,hw:0,hgf:0,hga:0,hpts:0,aw:0,agf:0,aga:0,apts:0,last:[],lastDate:0,g:0});
-   const H=T[e.hid]||blank(),A=T[e.aid]||blank(),px=predict(H,A,avg,e.date.getTime(),h2h(meets,e.hid,e.aid),cal('Ligue 2'));
+   const H=T[e.hid]||blank(),A=T[e.aid]||blank(),basePx=predict(H,A,avg,e.date.getTime(),h2h(meets,e.hid,e.aid),cal('Ligue 2')),px=stabilizeFl2(basePx,H,A);
    const score=e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)?[e.hs,e.as]:null;
    let m={id,lg:'Ligue 2',home:e.hn,away:e.an,d,h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(e.date),hc:e.h.team.logo||'',ac:e.a.team.logo||'',
     p1:r3(px.p1),pN:r3(px.pN),p2:r3(px.p2),btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,fm:px.fm,f10:px.f10,ng:px.ng,hh:px.hh,x:px.x,r:score,lock:started?1:0,
-    ia:'Pronostic Ligue 2 via ESPN : forme récente, buts marqués/encaissés et avantage domicile.'+(Math.min(H.g,A.g)<3?' Échantillon limité.':''),pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]};
+    ia:'Pronostic Ligue 2 via ESPN : forme récente, buts marqués/encaissés et avantage domicile. Buts attendus lissés selon '+px.sample+' matchs récents.'+(Math.min(H.g,A.g)<6?' Échantillon court : probabilité ramenée vers la moyenne du championnat.':'')+(OD?' Cotes bookmakers intégrées uniquement si disponibles.':' Cotes bookmakers indisponibles : estimation statistique prudente.'),pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]};
    if(started&&oldFl)m={...m,...oldFl,d,h:m.h,r:score||oldFl.r||null,lock:1};
    else{const ev=lgOdds.find(q=>same(q.h,e.hn)&&same(q.a,e.an));if(ev)m=blendMarketOdds(m,ev,.85);m=applyExperts(m)}
    out.push(m);seen.add(id);added++;
