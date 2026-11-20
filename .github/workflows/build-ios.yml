@@ -1,4 +1,4 @@
-name: Build Pronokikz for iOS
+name: Build unsigned Pronokikz IPA for AltStore
 
 on:
   push:
@@ -13,8 +13,9 @@ permissions:
 
 jobs:
   build-ios:
-    # EAS compiles iOS in Expo's cloud; this avoids waiting for a GitHub macOS runner.
-    runs-on: ubuntu-latest
+    # A macOS runner is required to compile a real iPhone device app.
+    # Signing is intentionally disabled; AltStore signs the IPA on the user's device.
+    runs-on: macos-14
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,46 +27,55 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - name: Set up Expo and EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
+      - name: Install JavaScript dependencies
         working-directory: mobile
         run: npm ci
 
-      - name: Build signed iOS IPA with EAS
+      - name: Generate iOS native project
         working-directory: mobile
-        run: eas build --platform ios --profile production --non-interactive --wait --json > ../eas-ios-build.json
+        run: npx expo prebuild --platform ios --no-install --clean
 
-      - name: Download generated IPA
+      - name: Install CocoaPods dependencies
+        working-directory: mobile
+        run: pod install --project-directory=ios
+
+      - name: Build iOS app without Apple signing
         working-directory: mobile
         run: |
-          BUILD_ID="$(node -e "const b=require('../eas-ios-build.json'); const x=Array.isArray(b)?b[0]:b; if(!x.id) process.exit(1); process.stdout.write(x.id)")"
-          eas build:download --build-id "$BUILD_ID" --non-interactive --json > ./eas-ios-download.json
-          IPA_PATH="$(node -e "const d=require('./eas-ios-download.json'); if(!d.path) process.exit(1); process.stdout.write(d.path)")"
-          test -f "$IPA_PATH"
-          cp "$IPA_PATH" ../Pronokikz.ipa
-          test -s ../Pronokikz.ipa
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$WORKSPACE"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme Pronokikz \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          APP_PATH="$(find build/ios/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+          mkdir -p ../ipa/Payload
+          cp -R "$APP_PATH" ../ipa/Payload/
+          cd ../ipa
+          /usr/bin/zip -qry ../Pronokikz-unsigned.ipa Payload
+          test -s ../Pronokikz-unsigned.ipa
 
-      - name: Upload IPA artifact
+      - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Pronokikz-iOS-IPA
-          path: Pronokikz.ipa
+          name: Pronokikz-unsigned-IPA
+          path: Pronokikz-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish IPA release
+      - name: Publish unsigned IPA release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ios-${{ github.run_number }}
-          name: Pronokikz iPhone - build ${{ github.run_number }}
+          tag_name: ios-unsigned-${{ github.run_number }}
+          name: Pronokikz iPhone (unsigned) - build ${{ github.run_number }}
           body: |
-            Fichier IPA Pronokikz compilé pour iOS.
-
-            L'installation directe dépend de la signature Apple et du profil de provisionnement associé.
-          files: Pronokikz.ipa
+            IPA iOS non signée. À importer dans AltStore ou SideStore pour la signer avec un identifiant Apple gratuit.
+            La signature gratuite expire généralement après 7 jours.
+          files: Pronokikz-unsigned.ipa
           make_latest: false
