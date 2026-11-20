@@ -1,0 +1,1 @@
+Déclencheur de compilation Android via GitHub Actions.
