@@ -4,8 +4,8 @@ const fs = require('fs');
 // Encapsule les await dans une fonction async : Node 22 ne peut pas
 // mélanger require() CommonJS et await au niveau supérieur.
 (async () => {
-const OD = process.env.ODDS_API_KEY;
-if (!OD) { console.log('ODDS_API_KEY absente : actualisation ignorée.'); process.exit(0); }
+const OD = process.env.APIFOOTBALL_API_KEY;
+if (!OD) { console.log('APIFOOTBALL_API_KEY absente : actualisation ignorée.'); process.exit(0); }
 const file = 'data.json';
 if (!fs.existsSync(file)) throw new Error('data.json introuvable');
 const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -48,30 +48,10 @@ const due = matches.filter(m => {
 });
 if (!due.length) { console.log('Aucun match dans sa fenêtre de rafraîchissement des cotes.'); process.exit(0); }
 const leagues = [...new Set(due.map(m=>m.lg))];
+let apifootballOddsPromise=null;
 async function fetchOdds(code) {
-  const url = 'https://api.the-odds-api.com/v4/sports/'+SPORT[code]+'/odds/?apiKey='+OD+'&regions=eu&markets=h2h,totals&oddsFormat=decimal';
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('The Odds API '+code+' : HTTP '+res.status);
-  return res.json();
-}
-function marketEvent(e) {
-  const best={h2h:{},totals:{}}, p=[0,0,0]; let n=0,o=0,on=0;
-  const save=(slot,key,price,bookmaker)=>{if(Number.isFinite(price)&&price>1&&(!best[slot][key]||price>best[slot][key].price))best[slot][key]={price,bookmaker};};
-  for (const b of (e.bookmakers||[])) for (const mk of (b.markets||[])) {
-    if (mk.key==='h2h') {
-      const get=name=>mk.outcomes.find(x=>x.name===name);
-      const h=get(e.home_team),d=get('Draw'),a=get(e.away_team);
-      const inv=[h,d,a].map(x=>x&&x.price>1?1/x.price:0),total=inv.reduce((s,x)=>s+x,0);
-      if(total&&inv.every(Boolean)){inv.forEach((x,i)=>p[i]+=x/total);n++;}
-      save('h2h','home',h&&h.price,b.title); save('h2h','draw',d&&d.price,b.title); save('h2h','away',a&&a.price,b.title);
-    }
-    if(mk.key==='totals') {
-      const over=mk.outcomes.find(x=>x.name==='Over'&&x.point===2.5),under=mk.outcomes.find(x=>x.name==='Under'&&x.point===2.5);
-      if(over&&under&&over.price>1&&under.price>1){o+=(1/over.price)/(1/over.price+1/under.price);on++;}
-      save('totals','over25',over&&over.price,b.title); save('totals','under25',under&&under.price,b.title);
-    }
-  }
-  return {h:e.home_team,a:e.away_team,p:n?p.map(x=>x/n):null,o:on?o/on:null,quotes:best,oddsAt:new Date().toISOString()};
+  if(!apifootballOddsPromise)apifootballOddsPromise=require('./apifootball-odds').fetchOdds(OD);
+  return apifootballOddsPromise;
 }
 let changed=0;
 for (const league of leagues) {
