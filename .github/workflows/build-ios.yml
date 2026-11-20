@@ -13,9 +13,9 @@ permissions:
 
 jobs:
   build-ios:
-    # A macOS runner is required to compile a real iPhone device app.
+    # Intel macOS runner provides more memory and remains supported through 2027.
     # Signing is intentionally disabled; AltStore signs the IPA on the user's device.
-    runs-on: macos-latest
+    runs-on: macos-15-intel
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
