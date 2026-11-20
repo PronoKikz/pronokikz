@@ -155,8 +155,9 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
  }
  if(!valid.size)return null;
  const target=(min+max)/2,ranked=[...valid.values()].sort((a,b)=>b.probability-a.probability||Math.abs(a.odds-target)-Math.abs(b.odds-target));
- // Choisir parmi plusieurs combinaisons valides proches de la cote cible pour que chaque relance puisse réellement varier.
- return ranked[0];
+ // Choisir parmi les meilleures combinaisons en faisant varier le résultat selon la graine.
+ const pool=ranked.slice(0,Math.min(12,ranked.length));
+ return pool[Math.abs(Math.trunc(seed))%pool.length];
 };
 const buildMyBetCombo = (matches: Match[], seed: number): Combo | null => {
  const myBets: ComboPick[] = [];
@@ -352,15 +353,25 @@ const checkForAppUpdate=async()=>{
  },[upcoming,leagueSeeds]);
  const rerollLeagueCombo=(groupId:string,tier:AdviceTier)=>{
   const group=competitionCombos.find(item=>item.groupId===groupId);if(!group)return;
+  const day=localDayKey(),previous=historyRef.current.filter(item=>item.groupId===groupId&&item.day===day&&item.tier===tier);
+  const signature=(combo:Combo|null)=>combo?combo.picks.map(p=>p.id+':'+p.market).sort().join('|'):'';
+  const make=(seed:number):Combo|null=>{
+   if(tier==='safe')return buildCombo(group.matches,2,2.5,seed+11,0.55)||buildCombo(group.matches,2,2.5,seed+111,0.45)||buildCombo(group.matches,2,2.5,seed+211,0.35);
+   if(tier==='medium')return buildCombo(group.matches,5,7,seed+29,0.45);
+   if(tier==='high')return buildCombo(group.matches,33,50,seed+47,0.35);
+   if(tier==='instinct')return buildInstinctPick(group.matches,seed);
+   return buildCombo(group.matches,1000,Number.POSITIVE_INFINITY,seed+83,0.35,false);
+  };
   const nextSeed=(leagueSeeds[groupId]?.[tier]??0)+1;let nextCombo:Combo|null=null;
-  if(tier==='safe')nextCombo=buildCombo(group.matches,2,2.5,nextSeed+11,0.55)||buildCombo(group.matches,2,2.5,nextSeed+111,0.45)||buildCombo(group.matches,2,2.5,nextSeed+211,0.35);
-  if(tier==='medium')nextCombo=buildCombo(group.matches,5,7,nextSeed+29,0.45);
-  if(tier==='high')nextCombo=buildCombo(group.matches,33,50,nextSeed+47,0.35);
-  if(tier==='instinct')nextCombo=buildInstinctPick(group.matches,nextSeed);
-  if(tier==='fun')nextCombo=buildCombo(group.matches,1000,Number.POSITIVE_INFINITY,nextSeed+83,0.35,false);
+  const previousSignatures=new Set(previous.map(item=>item.picks.map(p=>p.id+':'+p.market).sort().join('|')));
+  for(let attempt=0;attempt<24;attempt++){
+   const candidate=make(nextSeed+attempt*7919);
+   if(candidate&&(!previousSignatures.has(signature(candidate))||attempt===23)){nextCombo=candidate;if(!previousSignatures.has(signature(candidate)))break;}
+  }
   saveAdvice(groupId,tier,nextCombo,'relance');
   setLeagueSeeds(current=>({...current,[groupId]:{safe:current[groupId]?.safe??0,medium:current[groupId]?.medium??0,high:current[groupId]?.high??0,instinct:current[groupId]?.instinct??0,fun:current[groupId]?.fun??0,[tier]:nextSeed}}));
  };
+
  useEffect(()=>{if(!historyLoaded||loading||!competitionCombos.length)return;const group=competitionCombos[0];const tiers=(['safe','medium','high','instinct','fun'] as AdviceTier[]).filter(tier=>!!group[tier]?.picks?.length);const today=localDayKey();tiers.forEach(tier=>{if(!historyRef.current.some(item=>item.groupId===group.groupId&&item.day===today&&item.tier===tier))saveAdvice(group.groupId,tier,group[tier],'auto');});},[historyLoaded,loading,competitionCombos]);
  const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'|'instinct'|'fun'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
   <Text style={s.comboTitle}>{title}</Text>
