@@ -335,9 +335,18 @@ function render(){
  if(view=='p'){mesPronos();return}
  const dm=M.filter(m=>m.d===day||((m.r||m.liveStatus==='FINISHED')&&m.d<day&&m.d>=dayStr(-2))),lgs=[...new Set(dm.map(m=>m.lg))],open=dm.filter(isOpen);
  if(!dm.length){A.appendChild(h('p','mu',day<TD?'Aucun prono enregistré ce jour-là (l’historique garde 14 jours).':'Aucun match à afficher pour ce jour.'));return}
- const fn=dm.map(chk).filter(Boolean);
+ const fn=dm.map(chk).filter(Boolean),wins=fn.filter(x=>x.r).length,losses=fn.length-wins;
+ const pending=dm.filter(m=>!m.r&&!['FINISHED','CANCELLED','POSTPONED','AWARDED'].includes(m.liveStatus)).length;
+ const success=fn.length?Math.round(100*wins/fn.length)+'%':'–';
+ const dateTitle=new Date(day+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ A.appendChild(h('div','card',null,
+  h('div','ttl','📅 Matchs du jour · '+dateTitle),
+  h('div','stats',null,
+   ...[['Taux de réussite',success],['Pronostics gagnants',wins+'/'+fn.length],['Matchs à venir',pending]].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),
+  h('p','ia',fn.length?'Bilan calculé uniquement sur les matchs terminés : '+wins+' gagnant(s) et '+losses+' perdant(s). Les matchs en direct et à venir ne sont pas comptés.':'Aucun résultat final enregistré pour cette journée : le taux sera calculé automatiquement dès que les matchs seront terminés.'),
+  h('p','ia','Le taux mesure la réussite du pronostic principal (1, N, 2 ou double chance), enregistré avant le coup d’envoi.')));
  if(fn.length){const w=f=>fn.filter(x=>x[f]).length,o=fn.filter(x=>x.o!=null);
-  A.appendChild(h('div','card',null,h('div','ttl','📊 Bilan de ce jour ('+fn.length+' matchs terminés)'),h('div','stats',null,...[['Résultat',w('r')+'/'+fn.length],['BTTS',w('b')+'/'+fn.length],['+/-2,5',o.filter(x=>x.o).length+'/'+o.length]].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),h('p','ia','Les pronos affichés ci-dessous sont ceux enregistrés avant chaque match : ils ne sont jamais modifiés après.')))}
+  A.appendChild(h('div','card',null,h('div','ttl','📊 Autres statistiques de la journée'),h('div','stats',null,...[['BTTS',w('b')+'/'+fn.length],['+/-2,5',o.filter(x=>x.o).length+'/'+o.length]].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),h('p','ia','Les pronostics affichés ci-dessous sont ceux enregistrés avant chaque match : ils ne sont jamais modifiés après.')))}
  const fb=(t,on,f)=>{const b=h('button',on?'on':'',t);b.onclick=f;$('flt').appendChild(b)};
  fb('Tous',!F.lg,()=>{F.lg='';render()});lgs.forEach(l=>fb(l,F.lg===l,()=>{F.lg=l;render()}));fb('⭐ Confiance élevée',F.hi,()=>{F.hi=!F.hi;render()});
  const shown=dm.filter(m=>(!F.lg||m.lg===F.lg)&&(!F.hi||pick(m)[1]>=.6));
