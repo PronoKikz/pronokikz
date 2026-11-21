@@ -10,8 +10,8 @@ on:
       - 'live.js'
       - '.github/workflows/live-refresh.yml'
 concurrency:
-  group: pronokikz-live-refresh
-  cancel-in-progress: true
+  group: pronokikz-data-update
+  cancel-in-progress: false
 permissions:
   contents: write
 jobs:
