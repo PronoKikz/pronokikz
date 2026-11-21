@@ -194,6 +194,8 @@ function liveNode(m){if(!m.liveStatus||!liveFresh(m))return null;const st=m.live
  if(m.ex)e.appendChild(h('p','ia','👥 '+m.ex));
  const why=h('details','reason',null);why.appendChild(h('summary',null,'💡 Pourquoi ce pronostic ?'));why.appendChild(h('p','ia',whyPick(m)));e.appendChild(why);
  e.appendChild(c?h('div','fin','Score final '+c.s+'  ·  Résultat '+(c.r?'✅':'❌')+'  ·  BTTS '+(c.b?'✅':'❌')):h('p','ia','🤖 '+(m.ia||'')));return e}
+// Exclure l’Eredivisie de toutes les vues et des sélections de paris.
+M.splice(0,M.length,...M.filter(m=>String(m.lg||'').toLowerCase()!=='eredivisie'));
 const NLG='Ligue des nations';
 let day=(()=>{const f=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort()[0];return f||TD})(),view='m',F={lg:'',hi:false};
 const dlab=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:00'))/864e5);return n==0?'Aujourd’hui':n==1?'Demain':new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})};
