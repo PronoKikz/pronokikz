@@ -185,7 +185,12 @@ const toEspnMatch=(event,prefix)=>{
   const [y,mo,d]=String(m.d).split('-').map(Number);
   const [hh,mm]=String(m.h).slice(0,5).split(':').map(Number);
   if(!y||!mo||!d||!Number.isFinite(hh)||!Number.isFinite(mm))return false;
-  return parisNowMs>=Date.UTC(y,mo-1,d,hh,mm)+110*60000;
+  // En championnat, une rencontre sans prolongation ne doit pas rester live au-delà de 105 min.
+  // Pour les coupes et compétitions à élimination directe, on conserve une marge plus large.
+  const competition=String(m.lg||'');
+  const knockout=/cup|coupe|champions|europa|conference|copa|knockout|play.?off/i.test(competition);
+  const maxDuration=(knockout?160:105)*60000;
+  return parisNowMs>=Date.UTC(y,mo-1,d,hh,mm)+maxDuration;
  };
  const impossibleBeforeKickoff=['IN_PLAY','PAUSED','FINISHED'];
  // Un score final déjà enregistré (notamment le 5-0 Allemagne–Pays-Bas) est prioritaire sur tout ancien statut live.
