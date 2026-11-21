@@ -201,12 +201,23 @@ const dlab=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:0
 const dayLabel=i=>{if(i==0)return'Aujourd’hui';if(i==1)return'Demain';const d=new Date(TD+'T12:00:00');d.setDate(d.getDate()+i);return d.toLocaleDateString('fr-FR',{weekday:'long'})};
 const dayStr=i=>{const d=new Date(TD+'T12:00:00');d.setDate(d.getDate()+i);return d.toISOString().slice(0,10)};
 function stats(){const fin=M.filter(m=>m.r).map(chk);const T=(f)=>{const a=fin.filter(x=>x[f]!=null);return a.length?Math.round(100*a.filter(x=>x[f]).length/a.length)+'%':'–'};
- $('stats').textContent='';if(!fin.length)return;
- const bs=M.filter(m=>m.r&&m.p1!=null),br=bs.length?bs.reduce((a,m)=>{const o=m.r[0]>m.r[1]?[1,0,0]:m.r[0]==m.r[1]?[0,1,0]:[0,0,1];return a+(m.p1-o[0])**2+(m.pN-o[1])**2+(m.p2-o[2])**2},0)/bs.length:null;
- const c=h('div','card',null,h('div','ttl','📊 Mes résultats ('+fin.length+' matchs terminés)'),
-  h('div','stats',null,...[['Résultat','r'],['BTTS','b'],['+/-2,5','o']].map(([l,f])=>h('div','btn',null,h('small',null,l),h('b',null,T(f))))));
- if(br!=null)c.appendChild(h('p','ia','Précision (score de Brier) : '+br.toFixed(2).replace('.',',')+' · le hasard donne 0,67, un bon modèle 0,58 à 0,62. Plus c’est bas, mieux c’est.'));
- $('stats').appendChild(c)}
+ $('stats').textContent='';
+ if(fin.length){
+  const bs=M.filter(m=>m.r&&m.p1!=null),br=bs.length?bs.reduce((a,m)=>{const o=m.r[0]>m.r[1]?[1,0,0]:m.r[0]==m.r[1]?[0,1,0]:[0,0,1];return a+(m.p1-o[0])**2+(m.pN-o[1])**2+(m.p2-o[2])**2},0)/bs.length:null;
+  const c=h('div','card',null,h('div','ttl','📊 Mes résultats ('+fin.length+' matchs terminés)'),
+   h('div','stats',null,...[['Résultat','r'],['BTTS','b'],['+/-2,5','o']].map(([l,f])=>h('div','btn',null,h('small',null,l),h('b',null,T(f))))));
+  if(br!=null)c.appendChild(h('p','ia','Précision (score de Brier) : '+br.toFixed(2).replace('.',',')+' · le hasard donne 0,67, un bon modèle 0,58 à 0,62. Plus c’est bas, mieux c’est.'));
+  $('stats').appendChild(c);
+ }
+ const today=M.filter(m=>m.d===TD),done=today.map(chk).filter(Boolean),wins=done.filter(x=>x.r).length,losses=done.length-wins;
+ const pending=today.filter(m=>!m.r&&!['FINISHED','CANCELLED','POSTPONED','AWARDED'].includes(m.liveStatus)).length;
+ const pct=done.length?Math.round(100*wins/done.length)+'%':'–';
+ const label=new Date(TD+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ const daily=h('div','card',null,h('div','ttl','📅 Bilan des matchs du jour · '+label),
+  h('div','stats',null,...[['Taux de réussite',pct],['Gagnants',wins+'/'+done.length],['À venir / en cours',pending]].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),
+  h('p','ia',done.length?'Calculé sur les pronostics principaux des matchs terminés : '+wins+' gagnant(s), '+losses+' perdant(s).':'Le taux sera calculé automatiquement dès que les premiers matchs seront terminés.'));
+ $('stats').appendChild(daily);
+}
 function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  if(!S||!S.tot.n){A.appendChild(h('div','card',null,h('div','ttl','🧠 Apprentissage'),h('p','ia','Le modèle enregistre chaque prono avant le match, puis le compare au résultat réel. Rien à afficher tant qu’aucun match enregistré n’est terminé.')));return}
  const q=(a,b)=>b?Math.round(100*a/b)+'%':'–',t=S.tot;
