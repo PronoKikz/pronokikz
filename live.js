@@ -76,7 +76,7 @@ const toEspnMatch=(event,prefix)=>{
  // MatchEnDirect : source prioritaire pour les rencontres visibles sur son livescore.
  // On ne remplace une donnée existante que si les deux équipes et le score sont reconnus.
  const medAliases={
-  'andorra':'Andorre','netherlands':'Pays-Bas','north macedonia':'Macédoine du Nord',
+  'man city':'Manchester City','andorra':'Andorre','netherlands':'Pays-Bas','north macedonia':'Macédoine du Nord',
   'faroe islands':'Îles Féroé','azerbaijan':'Azerbaïdjan','iceland':'Islande',
   'slovenia':'Slovénie','switzerland':'Suisse','germany':'Allemagne','serbia':'Serbie',
   'slovakia':'Slovaquie','bulgaria':'Bulgarie','estonia':'Estonie','luxembourg':'Luxembourg',
@@ -93,8 +93,30 @@ const toEspnMatch=(event,prefix)=>{
  };
  const medNorm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s'-]/g,' ').replace(/\s+/g,' ').trim();
  const medTeam=s=>medNorm(medAliases[String(s||'').toLowerCase()]||s);
- // ESPN et Football-Data sont les sources de référence. MatchEnDirect ne doit
- // jamais écraser un événement déjà reçu d'une source structurée.
+ // ESPN fournit un second flux de score pour la Premier League : on le rapproche
+ // des rencontres Football-Data par date et noms d'équipes pour corriger les scores figés.
+ let espnPlCount=0;
+ const plPacks=await Promise.all([-1,0,1,2].map(async n=>{
+  try{return await espnEvents('eng.1',espnDay(n))}
+  catch(e){console.log('Live ESPN Premier League '+espnDay(n)+' indisponible : '+e.message);return []}
+ }));
+ for(const event of plPacks.flat()){
+  const competition=(event.competitions||[])[0],teams=competition&&competition.competitors||[];
+  const home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
+  if(!home||!away)continue;
+  const eventDate=day(new Date(event.date));
+  const hName=medTeam(home.team&&(home.team.displayName||home.team.name||home.team.shortDisplayName));
+  const aName=medTeam(away.team&&(away.team.displayName||away.team.name||away.team.shortDisplayName));
+  const target=matches.find(m=>m.d===eventDate&&medTeam(m.home)===hName&&medTeam(m.away)===aName);
+  if(!target)continue;
+  const live=toEspnMatch(event,'');
+  if(!live||!live.status)continue;
+  fetched.push({id:String(target.id),status:live.status,minute:live.minute,injuryTime:live.injuryTime,
+   score:{fullTime:live.liveScore},source:'ESPN'});
+  espnPlCount++;
+ }
+ console.log('Live ESPN Premier League : '+espnPlCount+' matchs rapprochés.');
+ // ESPN est prioritaire sur Football-Data pour les scores live, qui peuvent rester figés.
  const authoritativeIds=new Set(fetched.filter(x=>x.source==='ESPN'||x.source==='Football-Data').map(x=>String(x.id)));
  try{
   const response=await fetch('https://www.matchendirect.fr/live-score/',{headers:{'User-Agent':'Mozilla/5.0 (compatible; PronokikzLive/1.0)','Accept':'text/html'}});
@@ -212,7 +234,7 @@ const toEspnMatch=(event,prefix)=>{
   const minute=Number.isFinite(f.minute)?f.minute:null,added=Number.isFinite(f.injuryTime)?f.injuryTime:null;let status=f.status||null;
   if(afterExpectedEnd(m)&&['IN_PLAY','PAUSED','SUSPENDED'].includes(status))status='FINISHED';
   const scoreChanged=JSON.stringify(m.liveScore||null)!==JSON.stringify(liveScore);
-  const sourcePriority={'MatchEnDirect':1,'ESPN':2,'Football-Data':3};
+  const sourcePriority={'MatchEnDirect':1,'Football-Data':3,'ESPN':4};
   const incomingPriority=sourcePriority[f.source]||0,currentPriority=sourcePriority[m.liveSource]||0;
   // MI-TEMPS n'est pas un état final : un match peut reprendre en IN_PLAY.
   // On accepte donc la transition PAUSED -> IN_PLAY, même si la source entrante
