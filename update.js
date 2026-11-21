@@ -6,7 +6,7 @@
 // Absences, enjeux : ajustés à la main dans expert.js (champ aj).
 try { require('dotenv').config(); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 const fs=require('fs');
-const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.APIFOOTBALL_API_KEY,CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,DED').split(','),'FL2'])].filter(c=>c!=='ELC');
+const K=process.env.FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_KEY,OD=process.env.APIFOOTBALL_API_KEY,CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL').split(','),'FL2'])].filter(c=>c!=='ELC'&&c!=='DED');
 if(!K){console.error('Clé Football Data manquante : renseigne FOOTBALL_DATA_API_KEY (ou FOOTBALL_DATA_KEY) dans .env ou dans les secrets GitHub.');process.exit(1)}
 const SPORT={FL1:'soccer_france_ligue_one',FL2:'soccer_france_ligue_two',PL:'soccer_epl',PD:'soccer_spain_la_liga',SA:'soccer_italy_serie_a',BL1:'soccer_germany_bundesliga',CL:'soccer_uefa_champs_league',PPL:'soccer_portugal_primeira_liga',DED:'soccer_netherlands_eredivisie',ELC:'soccer_efl_champ',UWCL:'soccer_uefa_champs_league_women',NATIONS:'soccer_uefa_nations_league'};
 const get=async(p,n=0)=>{const r=await fetch('https://api.football-data.org/v4'+p,{headers:{'X-Auth-Token':K}});if(r.status===429&&n<3){console.log('limite atteinte, pause 65 s');await new Promise(z=>setTimeout(z,65000));return get(p,n+1)}if(!r.ok)throw new Error(p+' -> '+r.status);return r.json()};
@@ -120,7 +120,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
 (async()=>{
  const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),hourKey=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit'}).format(now),parisWallNow=Date.parse(new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(now).replace(' ','T')+'Z'),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
- const prev=(pj.matches||[]).filter(m=>m.lg!=='Championship'),hist=(pj.hist||[]).filter(e=>e.lg!=='Championship'),old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
+ const prev=(pj.matches||[]).filter(m=>m.lg!=='Championship'&&m.lg!=='Eredivisie'),hist=(pj.hist||[]).filter(e=>e.lg!=='Championship'&&e.lg!=='Eredivisie'),old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
  let fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
   .filter(f=>CODES.includes(f.competition.code)&&day(new Date(f.utcDate))>=from&&day(new Date(f.utcDate))<=last);
  // La liste globale /matches peut ne pas remonter la Ligue 2 selon le périmètre
