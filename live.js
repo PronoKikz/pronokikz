@@ -9,6 +9,7 @@ if(!K)console.log('Clé Football Data absente : ESPN et MatchEnDirect restent ac
 const CODES=[...new Set([...(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,ELC').split(',').map(x=>x.trim()) .filter(Boolean).filter(x=>x!=='DED'),'FL2'])];
 const get=async(path)=>{if(!K)throw new Error('Clé Football Data absente');const r=await fetch('https://api.football-data.org/v4'+path,{headers:{'X-Auth-Token':K}});if(!r.ok)throw new Error(path+' -> '+r.status);return r.json()};
 const day=(n)=>{const d=new Date(Date.now()+n*864e5);return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(d)};
+const dayOf=(date)=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
 const espnDay=(n)=>day(n).replace(/-/g,'');
 const espnEvents=async(sport,date)=>{
  const url='https://site.api.espn.com/apis/site/v2/sports/soccer/'+sport+'/scoreboard?dates='+date;
@@ -104,7 +105,7 @@ const toEspnMatch=(event,prefix)=>{
   const competition=(event.competitions||[])[0],teams=competition&&competition.competitors||[];
   const home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
   if(!home||!away)continue;
-  const eventDate=day(new Date(event.date));
+  const eventDate=dayOf(new Date(event.date));
   const hName=medTeam(home.team&&(home.team.displayName||home.team.name||home.team.shortDisplayName));
   const aName=medTeam(away.team&&(away.team.displayName||away.team.name||away.team.shortDisplayName));
   const target=matches.find(m=>m.d===eventDate&&medTeam(m.home)===hName&&medTeam(m.away)===aName);
