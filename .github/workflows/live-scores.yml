@@ -34,6 +34,6 @@ jobs:
           git add data.json data.js
           if ! git diff --cached --quiet; then
             git commit -m "Actualisation scores live $(date -u +%F-%H%M)"
-            git pull --rebase origin main
+            git pull --rebase -X theirs origin main
             git push
           fi
