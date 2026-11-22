@@ -246,7 +246,14 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    if(!home||!away||!home.team||!away.team||!e.date)return null;
    const status=comp.status&&comp.status.type,done=!!(status&&status.completed);
    const hs=home.score==null?null:Number(home.score),as=away.score==null?null:Number(away.score);
-   return {event:e,home,away,done,hs,as,date:new Date(e.date),
+   const clock=comp.status&&comp.status.displayClock||'';
+   const period=comp.status&&comp.status.period||null;
+   const desc=String(status&&status.description||'');
+   const state=String(status&&status.state||'');
+   const minuteMatch=String(clock).match(/^(\\d+)/);
+   const liveMinute=minuteMatch?Number(minuteMatch[1]):null;
+   const liveStatus=done?'FINISHED':/half.?time|halftime/i.test(desc)?'PAUSED':state==='in'?'IN_PLAY':state==='pre'?'TIMED':null;
+   return {event:e,home,away,done,hs,as,date:new Date(e.date),liveStatus,liveMinute,period,
     homeName:home.team.displayName||home.team.name||'Domicile',
     awayName:away.team.displayName||away.team.name||'Extérieur'};
   }).filter(e=>e&&Number.isFinite(e.date.getTime()));
@@ -291,6 +298,15 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
    };
    if(started&&oldW){
     m={...m,...oldW,d,h:m.h,r:score||oldW.r||null,lock:1};
+    // Toujours reprendre le statut live ESPN : ne pas conserver un ancien chrono après le coup de sifflet final.
+    if(e.liveStatus){
+     m.liveStatus=e.liveStatus;
+     m.liveScore=Number.isFinite(e.hs)&&Number.isFinite(e.as)?[e.hs,e.as]:(oldW.liveScore||null);
+     m.liveMinute=e.liveStatus==='IN_PLAY'?e.liveMinute:null;
+     m.liveAdded=null;
+     m.liveUpdatedAt=new Date().toISOString();
+     m.liveSource='ESPN';
+    }
    } else {
     const ev=findOddsMatch(uwclOdds,e.homeName,e.awayName);
     if(ev)m=blendMarketOdds(m,ev,.85);
