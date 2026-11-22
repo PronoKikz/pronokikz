@@ -1,4 +1,4 @@
-// Pronokikz Live v2 — suivi strict : aucun chrono extrapolé, aucun scraping MatchEnDirect. Relance diagnostic 2026-11-22.
+// Pronokikz Live v2 — suivi strict : minute fournisseur uniquement, heartbeat des matchs en cours.
 const fs=require('fs');
 const KEY=process.env.FOOTBALL_DATA_API_KEY||process.env.FOOTBALL_DATA_KEY||'';
 const LEAGUES=[...new Set((process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,ELC,FL2').split(',').map(x=>x.trim()).filter(x=>x&&x!=='DED'))];
@@ -27,7 +27,7 @@ function clockOf(event,comp){
  for(let i=0;i<packs.length;i++){const events=packs[i],league=ESPN[Math.floor(i/4)];for(const e of events){
   const c=(e.competitions||[])[0],ts=c?.competitors||[],h=ts.find(t=>t.homeAway==='home'),a=ts.find(t=>t.homeAway==='away');if(!h||!a)continue;
   const type=c?.status?.type||e.status?.type||{},state=String(type.state||'').toLowerCase();
-  const st=type.completed||state==='post'?'FINISHED':state==='in'?'IN_PLAY':null;if(!st)continue;
+  const detail=[type.name,type.description,type.detail,type.shortDetail].filter(Boolean).join(' ');const halftime=/half.?time|halftime|break/i.test(detail);const st=type.completed||state==='post'?'FINISHED':halftime?'PAUSED':state==='in'?'IN_PLAY':null;if(!st)continue;
   let m=null;if(league==='uefa.nations')m=byId.get('nations-'+e.id);if(league==='uefa.wchampions')m=byId.get('uwcl-'+e.id);
   if(!m){const d=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(e.date));const hn=norm(h.team?.displayName||h.team?.name),an=norm(a.team?.displayName||a.team?.name);m=matches.find(x=>x.d===d&&norm(x.home)===hn&&norm(x.away)===an);}
   if(!m)continue;const cl=st==='IN_PLAY'?clockOf(e,c):{minute:null,added:null};
@@ -38,10 +38,10 @@ function clockOf(event,comp){
   if(['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus)&&m.liveUpdatedAt&&Date.now()-Date.parse(m.liveUpdatedAt)>8*60000){for(const k of ['liveStatus','liveScore','liveMinute','liveAdded','liveUpdatedAt','liveSource'])delete m[k];changed++;}continue;}
   if(m.liveStatus==='FINISHED'&&u.status!=='FINISHED')continue;
   const sc=u.score||m.liveScore||null,min=u.status==='IN_PLAY'?u.minute:null,add=u.status==='IN_PLAY'?u.added:null;
-  if(m.liveStatus!==u.status||JSON.stringify(m.liveScore||null)!==JSON.stringify(sc)||m.liveMinute!==min||m.liveAdded!==add||m.liveSource!==u.source)changed++;
+  const previousUpdate=Date.parse(m.liveUpdatedAt||'');const heartbeatDue=['IN_PLAY','PAUSED','SUSPENDED'].includes(u.status)&&(!Number.isFinite(previousUpdate)||Date.now()-previousUpdate>120000);\n  if(m.liveStatus!==u.status||JSON.stringify(m.liveScore||null)!==JSON.stringify(sc)||m.liveMinute!==min||m.liveAdded!==add||m.liveSource!==u.source||heartbeatDue)changed++;
   m.liveStatus=u.status;m.liveScore=sc;m.liveMinute=min;m.liveAdded=add;m.liveUpdatedAt=now;m.liveSource=u.source;
   if(u.status==='FINISHED'&&sc)m.r=sc;
  }
- if(changed){fs.writeFileSync('data.json',JSON.stringify(data));let js=fs.readFileSync('data.js','utf8');js=js.replace(/const M=[\s\S]*?;\s*$/,'const M='+JSON.stringify(matches)+';').replace(/const UPDATED=[^;]*;/,'const UPDATED='+JSON.stringify(now)+';');fs.writeFileSync('data.js',js);}
+ if(changed){data.updatedAt=now;fs.writeFileSync('data.json',JSON.stringify(data));let js=fs.readFileSync('data.js','utf8');js=js.replace(/const M=[\s\S]*?;\s*$/,'const M='+JSON.stringify(matches)+';').replace(/const UPDATED=[^;]*;/,'const UPDATED='+JSON.stringify(now)+';');fs.writeFileSync('data.js',js);}
  console.log('Pronokikz Live v2: '+updates.size+' matchs reconnus, '+changed+' changements. Aucun chrono inventé.');
 })().catch(e=>{console.error(e);process.exit(1)});
