@@ -92,8 +92,8 @@ async function oddsFor(code){
 }
 // Mélange les probabilités du modèle avec les probabilités implicites du marché.
  // Le marché p est déjà normalisé sans marge bookmaker dans oddsFor().
- // Priorité au consensus bookmaker : 85 % marché, 15 % modèle statistique.
-function blendMarketOdds(m,ev,marketWeight=.85){
+ // Priorité au consensus bookmaker : 95 % marché, 5 % modèle statistique.
+function blendMarketOdds(m,ev,marketWeight=.95){
   if(!ev||!Array.isArray(ev.p)||ev.p.length!==3)return {...m,mkOdds:ev&&ev.quotes||m.mkOdds||null,mkOddsAt:ev&&ev.oddsAt||m.mkOddsAt};
   const base=m.raw||{p1:m.b0?.[0]??m.p1,pN:m.b0?.[1]??m.pN,p2:m.b0?.[2]??m.p2};
   const model=[base.p1,base.pN,base.p2],modelSum=model.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
@@ -158,7 +158,7 @@ function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.inc
     m={...m,mkAt:refreshKey};
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
-      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.15*raw.p1+.85*ev.p[0]),r3(.15*raw.pN+.85*ev.p[1]),r3(.15*raw.p2+.85*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
+      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.05*raw.p1+.95*ev.p[0]),r3(.05*raw.pN+.95*ev.p[1]),r3(.05*raw.p2+.95*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
    }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()};
