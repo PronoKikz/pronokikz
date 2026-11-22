@@ -166,7 +166,16 @@ function share(m){const t=`${nm(m)} (${m.lg} ${m.h})\nProno : ${X(m.fin)} · BTT
  if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t)}
 function crest(u,n){const w=h('div',null,null);if(u){const i=h('img','crest');i.src=u;i.alt='';i.loading='lazy';i.onerror=()=>{i.style.display='none'};w.appendChild(i)}w.appendChild(h('div',null,teamName(n)));return w}
 function conf(m,pk){let v=Math.round(Math.max(0,Math.min(1,(pk-.34)/.5))*100);if(m.mkp){const a=x=>x.indexOf(Math.max(...x));if(a(m.mkp)===a([m.p1,m.pN,m.p2]))v+=8}if(m.ng&&Math.min(...m.ng)<6)v-=10;return Math.max(0,Math.min(100,v))}
-function effectiveLiveStatus(m){return m&&m.liveStatus||''}
+function effectiveLiveStatus(m){
+ if(!m)return '';
+ const st=m.liveStatus||'';
+ if(['IN_PLAY','PAUSED','SUSPENDED'].includes(st)){
+  const kickoff=Date.parse((m.d||'')+'T'+String(m.h||'00:00').slice(0,5)+':00');
+  // Garde-fou : un match ne peut pas rester en direct plusieurs heures après son coup d'envoi.
+  if(Number.isFinite(kickoff)&&Date.now()-kickoff>4*60*60*1000)return 'FINISHED';
+ }
+ return st;
+}
 function liveText(m){
  const st=effectiveLiveStatus(m),score=Array.isArray(m.liveScore)?m.liveScore.join(' – '):'';
  if(st==='IN_PLAY'){
