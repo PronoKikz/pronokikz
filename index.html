@@ -170,7 +170,7 @@ function effectiveLiveStatus(m){return m&&m.liveStatus||''}
 function liveText(m){
  const st=effectiveLiveStatus(m),score=Array.isArray(m.liveScore)?m.liveScore.join(' – '):'';
  if(st==='IN_PLAY'){
-  let minute=Number.isFinite(Number(m.liveMinute))?Number(m.liveMinute):null;
+  let minute=m.liveMinute!==null&&m.liveMinute!==undefined&&Number.isFinite(Number(m.liveMinute))?Number(m.liveMinute):null;
   const updated=Date.parse(m.liveUpdatedAt||'');
   if(minute!==null&&Number.isFinite(updated)){
    const age=Math.max(0,Math.floor((Date.now()-updated)/60000));
