@@ -166,8 +166,26 @@ function share(m){const t=`${nm(m)} (${m.lg} ${m.h})\nProno : ${X(m.fin)} · BTT
  if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t)}
 function crest(u,n){const w=h('div',null,null);if(u){const i=h('img','crest');i.src=u;i.alt='';i.loading='lazy';i.onerror=()=>{i.style.display='none'};w.appendChild(i)}w.appendChild(h('div',null,teamName(n)));return w}
 function conf(m,pk){let v=Math.round(Math.max(0,Math.min(1,(pk-.34)/.5))*100);if(m.mkp){const a=x=>x.indexOf(Math.max(...x));if(a(m.mkp)===a([m.p1,m.pN,m.p2]))v+=8}if(m.ng&&Math.min(...m.ng)<6)v-=10;return Math.max(0,Math.min(100,v))}
-function effectiveLiveStatus(m){if(!m)return '';if(m.liveStatus==='PAUSED'){const kickoff=Date.parse((m.d||'')+'T'+(m.h||'00:00').slice(0,5)+':00');if(Number.isFinite(kickoff)){const elapsed=(Date.now()-kickoff)/60000;if(elapsed>=62)return 'IN_PLAY'}}return m.liveStatus}
-function liveText(m){const st=effectiveLiveStatus(m),score=Array.isArray(m.liveScore)?m.liveScore.join(' – '):'';if(st==='IN_PLAY'){let minute=m.liveMinute;if(m.liveStatus==='PAUSED'){const kickoff=Date.parse((m.d||'')+'T'+(m.h||'00:00').slice(0,5)+':00');if(Number.isFinite(kickoff))minute=Math.max(46,Math.floor((Date.now()-kickoff)/60000)-15)}if(minute!=null){const updated=Date.parse(m.liveUpdatedAt||''),age=Number.isFinite(updated)?Math.max(0,Math.floor((Date.now()-updated)/60000)):0;minute+=age;const kickoff=Date.parse((m.d||'')+'T'+(m.h||'00:00').slice(0,5)+':00');if(Number.isFinite(kickoff)){const elapsed=Math.floor((Date.now()-kickoff)/60000);if(elapsed>=0&&elapsed<=45&&minute<elapsed-4)minute=elapsed;}minute=Math.min(120,minute)}return '🔴 EN DIRECT'+(minute!=null?' · '+minute+(m.liveAdded?'+ '+m.liveAdded:'')+'′':'')+(score?' · '+score:'')}if(st==='PAUSED')return '⏸ MI-TEMPS'+(score?' · '+score:'');if(st==='FINISHED')return '✓ TERMINÉ'+(score?' · '+score:'');if(st==='SUSPENDED')return '⚠ MATCH INTERROMPU'+(score?' · '+score:'');if(st==='POSTPONED')return 'MATCH REPORTÉ';if(st==='CANCELLED')return 'MATCH ANNULÉ';if(st==='AWARDED')return 'MATCH ATTRIBUÉ'+(score?' · '+score:'');return ''}
+function effectiveLiveStatus(m){return m&&m.liveStatus||''}
+function liveText(m){
+ const st=effectiveLiveStatus(m),score=Array.isArray(m.liveScore)?m.liveScore.join(' – '):'';
+ if(st==='IN_PLAY'){
+  let minute=Number.isFinite(Number(m.liveMinute))?Number(m.liveMinute):null;
+  const updated=Date.parse(m.liveUpdatedAt||'');
+  if(minute!==null&&Number.isFinite(updated)){
+   const age=Math.max(0,Math.floor((Date.now()-updated)/60000));
+   minute=Math.min(130,minute+age);
+  }
+  return '🔴 EN DIRECT'+(minute!==null?' · '+minute+(m.liveAdded?' +'+m.liveAdded:'')+'′':'')+(score?' · '+score:'');
+ }
+ if(st==='PAUSED')return '⏸ MI-TEMPS'+(score?' · '+score:'');
+ if(st==='FINISHED')return '✓ TERMINÉ'+(score?' · '+score:'');
+ if(st==='SUSPENDED')return '⚠ MATCH INTERROMPU'+(score?' · '+score:'');
+ if(st==='POSTPONED')return 'MATCH REPORTÉ';
+ if(st==='CANCELLED')return 'MATCH ANNULÉ';
+ if(st==='AWARDED')return 'MATCH ATTRIBUÉ'+(score?' · '+score:'');
+ return '';
+}
 function liveFresh(m){if(!m||!['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus))return true;const t=Date.parse(m.liveUpdatedAt||'');return Number.isFinite(t)&&Date.now()-t<=10*60*1000}
 function liveNode(m){if(!m.liveStatus||!liveFresh(m))return null;const st=effectiveLiveStatus(m),n=h('div','live-status '+(st==='PAUSED'?'paused':st==='FINISHED'?'finished':st==='IN_PLAY'?'':'other'),liveText(m));n.dataset.liveId=String(m.id);return n}
 function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/(\d+)-(\d+)/)||(m.ia||'').match(/(\d)-(\d)/),ci=conf(m,pk),cf=['Confiance '+ci,ci>=65?'g':ci>=40?'y':''];
