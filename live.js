@@ -1,4 +1,4 @@
-// Pronokikz Live v2 — suivi strict : aucun chrono extrapolé, aucun scraping MatchEnDirect.
+// Pronokikz Live v2 — suivi strict : aucun chrono extrapolé, aucun scraping MatchEnDirect. Relance diagnostic 2026-11-22.
 const fs=require('fs');
 const KEY=process.env.FOOTBALL_DATA_API_KEY||process.env.FOOTBALL_DATA_KEY||'';
 const LEAGUES=[...new Set((process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,ELC,FL2').split(',').map(x=>x.trim()).filter(x=>x&&x!=='DED'))];
