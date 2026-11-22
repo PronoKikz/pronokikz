@@ -1,42 +1,40 @@
-name: Actualisation des scores en direct
-# Déclenchement et publication des statuts live sur chaque mise à jour du suivi.
+name: Pronokikz Live v2
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/2 * * * *'
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'live.js'
       - '.github/workflows/live-refresh.yml'
 concurrency:
-  group: pronokikz-data-update
-  cancel-in-progress: false
+  group: pronokikz-live-v2
+  cancel-in-progress: true
 permissions:
   contents: write
 jobs:
   live:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Actualiser les scores et statuts
+      - name: Actualiser les matchs
         run: node live.js
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY || secrets.FOOTBALL_DATA_KEY }}
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY || secrets.FOOTBALL_DATA_API_KEY }}
           LEAGUES: FL1,PL,PD,SA,BL1,CL,PPL,ELC,FL2
-      - name: Publier les données live
+      - name: Publier les données
         run: |
           git config user.name "prono-bot"
           git config user.email "bot@users.noreply.github.com"
           git add data.js data.json
           if ! git diff --cached --quiet; then
-            git commit -m "Actualisation live $(date -u +%F-%H%M)"
+            git commit -m "Actualisation live v2 $(date -u +%F-%H%M)"
             git pull --rebase -X theirs origin main
             git push
           fi
