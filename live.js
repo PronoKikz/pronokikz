@@ -145,7 +145,7 @@ const toEspnMatch=(event,prefix)=>{
     if(scoreMatches.length&&ai-hi<180){
      const score=scoreMatches[scoreMatches.length-1];
      const before=textMed.slice(Math.max(0,hi-70),hi);
-     const after=textMed.slice(ai+away.length,ai+away.length+140);
+     const after=textMed.slice(ai+away.length,ai+away.length+45);
      // Le texte aplati de MatchEnDirect peut placer la minute d'un match voisin
      // juste avant le nom de l'équipe. On ne lit donc plus l'horloge dans "before".
      // Une minute n'est affichée que si elle suit immédiatement les deux équipes.
