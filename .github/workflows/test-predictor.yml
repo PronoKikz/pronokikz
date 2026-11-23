@@ -21,7 +21,9 @@ jobs:
       - run: node --check scorer.js
       - run: node --check ai_scorer.js
       - run: node --check history.js
+      - run: node --check odds-refresh.js
       - run: node tests/history.test.js
+      - run: node tests/walkforward.test.js
       - run: node tests/ai-scorer.test.js
       - run: node tests/scorer.test.js
       - run: node tests/predictor.test.js
