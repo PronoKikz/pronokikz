@@ -38,7 +38,8 @@ function clockOf(event,comp){
   if(['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus)&&m.liveUpdatedAt&&Date.now()-Date.parse(m.liveUpdatedAt)>8*60000){for(const k of ['liveStatus','liveScore','liveMinute','liveAdded','liveUpdatedAt','liveSource'])delete m[k];changed++;}continue;}
   if(m.liveStatus==='FINISHED'&&u.status!=='FINISHED')continue;
   const sc=u.score||m.liveScore||null,min=u.status==='IN_PLAY'?u.minute:null,add=u.status==='IN_PLAY'?u.added:null;
-  const previousUpdate=Date.parse(m.liveUpdatedAt||'');const heartbeatDue=['IN_PLAY','PAUSED','SUSPENDED'].includes(u.status)&&(!Number.isFinite(previousUpdate)||Date.now()-previousUpdate>120000);\n  if(m.liveStatus!==u.status||JSON.stringify(m.liveScore||null)!==JSON.stringify(sc)||m.liveMinute!==min||m.liveAdded!==add||m.liveSource!==u.source||heartbeatDue)changed++;
+  const previousUpdate=Date.parse(m.liveUpdatedAt||'');const heartbeatDue=['IN_PLAY','PAUSED','SUSPENDED'].includes(u.status)&&(!Number.isFinite(previousUpdate)||Date.now()-previousUpdate>120000);
+  if(m.liveStatus!==u.status||JSON.stringify(m.liveScore||null)!==JSON.stringify(sc)||m.liveMinute!==min||m.liveAdded!==add||m.liveSource!==u.source||heartbeatDue)changed++;
   m.liveStatus=u.status;m.liveScore=sc;m.liveMinute=min;m.liveAdded=add;m.liveUpdatedAt=now;m.liveSource=u.source;
   if(u.status==='FINISHED'&&sc)m.r=sc;
  }
