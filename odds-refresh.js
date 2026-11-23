@@ -56,7 +56,7 @@ for (const m of due) {
   const ev=findOddsMatch(events,m.home,m.away);
   if(!ev) { console.log('Pas de cote correspondante : '+m.home+' - '+m.away); continue; }
   m.mkOdds=ev.quotes; m.mkOddsAt=ev.oddsAt;
-  if(ev.p) {
+  if(Array.isArray(ev.p)&&ev.p.length===3) {
     const base=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
     const model=[base.p1,base.pN,base.p2],total=model.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0);
     if(model.every(Number.isFinite)&&total>0) {
