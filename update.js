@@ -111,7 +111,7 @@ const { pickScorerWithAI } = require('./ai_scorer');
 const { pickMatchWithAI } = require('./ai_match');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
 let EXPL=[],MANUAL_EXTRA=[];try{const cfg=require('vm').runInNewContext(fs.readFileSync('expert.js','utf8')+';({EXPERTS,EXTRA})')||{};EXPL=cfg.EXPERTS||[];MANUAL_EXTRA=cfg.EXTRA||[]}catch(e){console.log('expert.js illisible : '+e.message)}
-function applyExperts(m){const e=EXPL.find(x=>(nz(m.home).includes(x.h)||x.h.includes(nz(m.home)))&&(nz(m.away).includes(x.a)||x.a.includes(nz(m.away))));
+function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a));
  let[p1,pN,p2]=m.b0||[m.p1,m.pN,m.p2];
  if(e&&Array.isArray(e.p)&&e.p.length===3&&e.p.every(Number.isFinite)&&e.p.every(v=>v>=0)){const total=e.p.reduce((a,b)=>a+b,0);if(total>0)[p1,pN,p2]=e.p.map(v=>v/total)}
  else if(e&&e.aj){const k=Math.max(-.2,Math.min(.2,e.aj*.1));p1=Math.max(.02,p1+k);p2=Math.max(.02,p2-k);const t=p1+pN+p2;p1/=t;pN/=t;p2/=t}
