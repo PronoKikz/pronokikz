@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
-const { predictedScorerName, scorerHit, buildHistoryEntry } = require('../history');
+const { predictedScorerName, scorerHit, buildHistoryEntry, isTemporallyVerified } = require('../history');
 const { evaluateAdvice } = require('../mobile/adviceHistory');
 
 assert.equal(predictedScorerName('Kylian Mbappé (13 buts) · 72 % estimés'), 'Kylian Mbappé');
@@ -30,6 +30,9 @@ assert.equal(entry.kickoffAt, '2026-11-10T12:00:00.000Z');
 assert.equal(entry.resultAvailableAt, '2026-11-10T14:00:00.000Z');
 assert.equal(entry.selection, '1N');
 assert.equal(entry.aiSelection, '1');
+assert.equal(isTemporallyVerified(entry), true);
+assert.equal(isTemporallyVerified({...entry, resultAvailableAt: '2026-11-10T11:59:59.000Z'}), false);
+assert.equal(isTemporallyVerified({...entry, predictionAt: '2026-11-10T12:00:00.000Z'}), false);
 
 const adviceMatches = [
   { id: 1, r: [2, 0] },
