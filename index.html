@@ -262,6 +262,8 @@ function apprentissage(){const S=typeof STAT!=='undefined'?STAT:null;
  const G=typeof LEARN!=='undefined'&&LEARN._g;if(G&&G.n>=15)A.appendChild(h('div','card',null,h('div','ttl','🔧 Correction automatique du modèle'),h('p','ia','Calculée sur '+G.n+' matchs : contraste favori/outsider ×'+G.T.toFixed(2).replace('.',',')+' · nuls ×'+G.dr.toFixed(2).replace('.',',')+'. Plus il y a de matchs enregistrés, plus la correction est fiable (au départ elle est très prudente).')));
  A.appendChild(h('p','mu','Les écarts constatés corrigent peu à peu les prochains calculs (buts attendus, avantage du domicile), dès 20 matchs par championnat.'))}
 let BETS=[],COMBOS=[],BANK=100,CBM=0;try{BETS=JSON.parse(localStorage.getItem('pfbets')||'[]');COMBOS=JSON.parse(localStorage.getItem('pfcombos')||'[]');BANK=+localStorage.getItem('pfbank')||100}catch(e){}
+let CONSEILS=[];try{CONSEILS=JSON.parse(localStorage.getItem('pfconseils')||'[]')}catch(e){CONSEILS=[]}
+const saveConseils=()=>{try{localStorage.setItem('pfconseils',JSON.stringify(CONSEILS))}catch(e){}};
 const saveB=()=>{try{localStorage.setItem('pfbets',JSON.stringify(BETS));localStorage.setItem('pfcombos',JSON.stringify(COMBOS));localStorage.setItem('pfbank',String(BANK))}catch(e){}};
 const hasBet=(m,k,sd)=>BETS.some(b=>b.id===m.id&&b.kind===k&&b.side===sd);
 function addBet(m,kind,side,label,p,cb,quiet){const ex=BETS.find(b=>b.id===m.id&&b.kind===kind&&b.side===side);
@@ -329,6 +331,58 @@ function mesPronos(){
  A.appendChild(h('div','card',null,h('div','ttl','📒 Mon suivi ('+nbt+' paris terminés avec une mise)'),h('div','stats',null,...[['Misé',eur(mis)],['Bénéfice',(gain>=0?'+':'')+eur(gain)],['Rendement',mis?nf(Math.round(1000*gain/mis)/10,1)+' %':'–']].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),
   h('p','ia','Réussite : '+(nbt?Math.round(100*win/nbt)+' %':'–')+'. Le gagné ou perdu se met à jour tout seul après les matchs.')));
  A.appendChild(h('p','mu','Le conseil de mise n’est pas une promesse : il suppose que mes probabilités sont justes. Ne joue que ce que tu peux perdre.'))}
+
+function conseilLegResult(leg){
+ const m=M.find(x=>String(x.id)===String(leg.id));
+ if(!m||!Array.isArray(m.r)||m.r.length!==2)return null;
+ const [h,a]=m.r,real=h>a?'1':h===a?'N':'2';
+ if(leg.kd==='x2')return String(leg.sd||'').includes(real);
+ if(leg.kd==='btts')return (leg.sd==='oui')===(h>0&&a>0);
+ if(leg.kd==='o15')return (leg.sd==='plus')===(h+a>1);
+ if(leg.kd==='o25')return (leg.sd==='plus')===(h+a>2);
+ return null;
+}
+function conseilStatus(c){
+ const results=c.legs.map(conseilLegResult);
+ if(results.some(x=>x===false))return 'p';
+ if(results.length&&results.every(x=>x===true))return 'g';
+ return '';
+}
+function mesConseils(){
+ const today=TD;
+ let conseil=CONSEILS.find(x=>x.d===today);
+ // Un seul conseil est figé par jour : seuls les choix réellement affichés dans cet onglet sont archivés.
+ if(!conseil){
+  const open=M.filter(m=>m.d===today&&isOpen(m)&&!m.r&&m.p1!=null);
+  const candidate=conseilCands(open)[0];
+  if(candidate&&candidate.l&&candidate.l.length){
+   conseil={id:'conseil-'+today,d:today,createdAt:new Date().toISOString(),p:candidate.p,
+    legs:candidate.l.map(l=>({id:l.id,match:l.m,home:M.find(m=>String(m.id)===String(l.id))?.home||'',away:M.find(m=>String(m.id)===String(l.id))?.away||'',league:M.find(m=>String(m.id)===String(l.id))?.lg||'',label:l.l,kind:l.kd,side:l.sd,probability:l.p}))};
+   CONSEILS.push(conseil);saveConseils();
+  }
+ }
+ CONSEILS.forEach(c=>{c.status=conseilStatus(c)});
+ saveConseils();
+ const done=CONSEILS.filter(c=>c.status==='g'||c.status==='p'),wins=done.filter(c=>c.status==='g').length,losses=done.filter(c=>c.status==='p').length,pending=CONSEILS.length-done.length;
+ const rate=done.length?Math.round(wins/done.length*100)+' %':'–';
+ A.appendChild(h('div','card reco',null,h('div','ttl','⭐ Historique de mes conseils'),
+  h('div','stats',null,...[['Gagnés',String(wins)],['Perdus',String(losses)],['En attente',String(pending)]].map(([l,v])=>h('div','btn',null,h('small',null,l),h('b',null,v)))),
+  h('div','tot',null,h('span',null,'Taux de réussite'),h('b',null,rate)),
+  h('p','ia','Un conseil est enregistré uniquement lorsqu’il est affiché ici. Les boutons de relance des combinés ailleurs dans l’application ne créent aucune entrée dans cet historique. Chaque conseil conserve ses sélections et probabilités d’origine.')));
+ if(!CONSEILS.length){A.appendChild(h('p','mu','Aucun conseil enregistré pour le moment. Ouvre cet onglet lorsqu’un conseil du jour est disponible.'));return}
+ CONSEILS.slice().reverse().forEach(c=>{
+  const st=c.status||'',status=st==='g'?'✓ GAGNÉ':st==='p'?'✗ PERDU':'… EN ATTENTE';
+  const cardEl=h('div','card',null,h('div','top',null,h('span','mu',new Date(c.createdAt||c.d+'T12:00:00').toLocaleDateString('fr-FR')),h('span','chip '+(st==='g'?'g':st==='p'?'r':'y'),status)));
+  c.legs.forEach(l=>{
+   const m=M.find(x=>String(x.id)===String(l.id)),score=m&&m.r?m.r.join(' – '):'';
+   cardEl.appendChild(h('div','l',null,h('span',null,l.match+' : '+l.label),h('span',null,Math.round((l.probability||0)*100)+' %')));
+   if(score)cardEl.appendChild(h('p','ia','Score final : '+score));
+  });
+  cardEl.appendChild(h('div','tot',null,h('span',null,'Probabilité estimée au moment de l’enregistrement'),h('b',null,Math.round((c.p||0)*100)+' %')));
+  A.appendChild(cardEl);
+ });
+}
+
 const cote2=p=>'une cote de '+(1/p*1.02).toFixed(2).replace('.',',');
 function crit(){const R=[['Forme des 5 derniers matchs','20 %','auto'],['Niveau des équipes','20 %','auto'],['Domicile / extérieur','15 %','auto'],['Attaque et défense','15 %','auto'],['Absences et blessures','10 %','manuel'],['Motivation et enjeux','10 %','manuel'],['Confrontations directes','5 %','manuel'],['Contexte tactique','5 %','manuel']];
  return h('div','card',null,h('div','ttl','ℹ️ Comment sont calculés les pronos'),...R.map(([a,b,c])=>h('div','l',null,h('span',null,a+' ('+c+')'),h('span',null,b))),h('p','ia','« auto » : calculé chaque jour par le programme. « manuel » : ajusté par moi dans les avis d’experts (champ aj) quand je mets à jour.'))}
@@ -347,7 +401,7 @@ function pickRow(m){const op=[['x2:1','Victoire '+teamName(m.home),m.p1],['x2:N'
  return h('div','card',null,h('div','mu',m.lg+' · '+m.h),h('div','ttl',nm(m)),h('div','gg',null,sel,b))}
 function render(){
  A.textContent='';['tabs','vtabs','flt'].forEach(i=>$(i).textContent='');
- [['d','📅 Match du jour'],['m','⚽ Matchs'],['l','🔴 En direct'],['f','✓ Terminés'],['p','⭐ Mes pronos'],['n','🌍 Ligue des nations'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;if(v==='d')day=TD;render()};$('vtabs').appendChild(b)});
+ [['d','📅 Match du jour'],['m','⚽ Matchs'],['l','🔴 En direct'],['f','✓ Terminés'],['p','⭐ Mes pronos'],['c','⭐ Mes conseils'],['n','🌍 Ligue des nations'],['a','🧠 Apprentissage']].forEach(([v,t])=>{const b=h('button',view==v?'on':'',t);b.onclick=()=>{view=v;if(v==='d')day=TD;render()};$('vtabs').appendChild(b)});
  if(view=='l'){
   const live=M.filter(m=>['IN_PLAY','PAUSED','SUSPENDED'].includes(effectiveLiveStatus(m))&&liveFresh(m)).slice().sort((a,b)=>{
    const league=String(a.lg||'').localeCompare(String(b.lg||''),'fr');
@@ -359,6 +413,7 @@ function render(){
   return;
  }
  if(view=='n'){nations();return}
+ if(view=='c'){mesConseils();return}
  if(view=='a'){apprentissage();return}
  if(view==='d')day=TD;
  if(view=='f'){
