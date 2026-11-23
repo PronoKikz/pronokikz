@@ -13,7 +13,10 @@ const EXPERTS=[
 {h:'spain',a:'england',fin:'',ex:'',bt:'Harry Kane (7 buts en Ligue des nations)'},
 {h:'turquie',a:'belgique',fin:'2',ex:'Experts : victoire de la Belgique.',bt:''},
 {h:'italie',a:'france',fin:'N2',ex:'Experts : la France gagne ou fait nul, moins de 2,5 buts. Italie sans Kean, Retegui ni Raspadori.',bt:'Mbappé (France)'},
-{h:'angleterre',a:'croatie',fin:'1',ex:'Experts : victoire de l’Angleterre, plus de 2,5 buts (moins de 3,5 pour certains). 7-0 à l’aller.',bt:'Kane (Angleterre)'}
+{h:'angleterre',a:'croatie',fin:'1',ex:'Experts : victoire de l’Angleterre, plus de 2,5 buts (moins de 3,5 pour certains). 7-0 à l’aller.',bt:'Kane (Angleterre)'},
+{h:'galatasaray',a:'astonvilla',p:[0.35,0.27,0.38],fin:'N2',ex:'Réévaluation : Galatasaray reste fort à domicile, mais les absences offensives et la qualité de Villa rendent la double chance extérieure plus prudente.',bt:''},
+{h:'bodoglimt',a:'lask',p:[0.52,0.25,0.23],fin:'1',ex:'Réévaluation : avantage à Bodø/Glimt à domicile ; les previews convergent vers une victoire norvégienne, sans en faire un pari sans risque.',bt:''},
+{h:'como1907',a:'paeaek',p:[0.74,0.16,0.10],fin:'1',ex:'Réévaluation : Como est nettement supérieur dans cette phase de Ligue des champions ; AEK reste fragile à l’extérieur. Favori confirmé, sans probabilité extrême.',bt:''}
 ];
 // Combiné conseillé choisi à la main (facultatif). Si vide, l'appli choisit le plus sûr.
 // Exemple : const COMBO={legs:[{m:'PSG – Troyes',l:'PSG gagne',p:0.8}],note:'Mon avis'};
