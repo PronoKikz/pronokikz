@@ -52,7 +52,7 @@ assert.equal(pending.status, 'pending');
 assert.equal(evaluateAdvice([{ id: 1, market: 'Marché inconnu' }], adviceMatches).status, 'pending');
 assert.equal(evaluateAdvice([{ id: 1, market: 'Match nul (N)' }], [{ id: 1, r: [-1, 0] }]).status, 'pending');
 assert.equal(evaluateAdvice([{ id: 3, market: 'Double chance N/2' }], adviceMatches).status, 'won');
-assert.equal(evaluateAdvice([{ id: 1, market: 'Plus de 2,5 buts' }], adviceMatches).status, 'pending');
+assert.equal(evaluateAdvice([{ id: 1, market: 'Plus de 2,5 buts' }], adviceMatches).status, 'lost');
 assert.equal(evaluateAdvice([{ id: 1, market: 'Moins de 2,5 buts' }], adviceMatches).status, 'won');
 assert.equal(evaluateAdvice([{ id: 1, market: 'Les 2 équipes marquent : NON' }], adviceMatches).status, 'won');
 
