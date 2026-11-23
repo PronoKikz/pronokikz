@@ -373,7 +373,7 @@ const checkForAppUpdate=async()=>{
   setLeagueSeeds(current=>({...current,[groupId]:{safe:current[groupId]?.safe??0,medium:current[groupId]?.medium??0,high:current[groupId]?.high??0,instinct:current[groupId]?.instinct??0,fun:current[groupId]?.fun??0,[tier]:nextSeed}}));
  };
 
- useEffect(()=>{if(!historyLoaded||loading||!competitionCombos.length)return;const group=competitionCombos[0];const tiers=(['safe','medium','high','instinct','fun'] as AdviceTier[]).filter(tier=>!!group[tier]?.picks?.length);const today=localDayKey();tiers.forEach(tier=>{if(!historyRef.current.some(item=>item.groupId===group.groupId&&item.day===today&&item.tier===tier))saveAdvice(group.groupId,tier,group[tier],'auto');});},[historyLoaded,loading,competitionCombos]);
+ // L’historique de l’onglet est alimenté uniquement par dailyCombos, c’est-à-dire les conseils réellement visibles.
  // Enregistrer uniquement les combinés actuellement visibles dans « Mon conseil ». Un relancement remplace le conseil précédent du même jour et du même niveau, sans empiler les anciennes versions.
  useEffect(()=>{if(!historyLoaded||loading||!dailyCombos.length)return;const today=localDayKey();const tiers:AdviceTier[]=['safe','medium','high','instinct','fun'];dailyCombos.forEach((item,index)=>saveAdvice(today,tiers[index],item.combo,'auto'));},[historyLoaded,loading,dailyCombos]);
  const ComboCard=({title,combo,accent,groupId,tier}:{title:string;combo:Combo|null;accent:string;groupId:string;tier:'safe'|'medium'|'high'|'instinct'|'fun'})=><View style={[s.card,{borderColor:accent,borderLeftWidth:4}]}>
