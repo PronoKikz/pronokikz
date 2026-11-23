@@ -78,7 +78,7 @@ function predict(H,A,avg,when,hh,cal){
  lh=Math.max(.3,lh*cal.gf*cal.hf);la=Math.max(.3,la*cal.gf/cal.hf);
  return{...model(lh,la),fm:[sum(p5(H)),sum(p5(A))],f10:[sum(p10(H)),sum(p10(A))],ng:[H.g,A.g],hh:[hh.w,hh.d,hh.l],x:[Math.round(lh*100)/100,Math.round(la*100)/100]}}
 function aggregate(hist){const z=()=>({n:0,h:0,b:0,no:0,o:0,br:0,ll:0}),G={tot:z(),lg:{},bk:{'moins de 45 %':{n:0,h:0},'45 à 60 %':{n:0,h:0},'plus de 60 %':{n:0,h:0}}},E=[0,.2,.35,.5,.65,.8,1.01],cal=E.slice(0,-1).map((lo,i)=>({a:lo,b:Math.min(1,E[i+1]),n:0,sp:0,h:0}));
- hist.forEach(e=>{const[p1,pN,p2]=e.p,o=e.r[0]>e.r[1]?0:e.r[0]==e.r[1]?1:2,mx=Math.max(p1,pN,p2),hit=e.p.indexOf(mx)===o?1:0,
+ hist.filter(isTemporallyVerified).forEach(e=>{const[p1,pN,p2]=e.p,o=e.r[0]>e.r[1]?0:e.r[0]==e.r[1]?1:2,mx=Math.max(p1,pN,p2),hit=e.p.indexOf(mx)===o?1:0,
   bt=(e.b>=.5)==(e.r[0]>0&&e.r[1]>0)?1:0,br=e.p.reduce((s,p,i)=>s+(p-(i===o?1:0))**2,0),ll=-Math.log(Math.max(1e-6,e.p[o]));
   [G.tot,G.lg[e.lg]||(G.lg[e.lg]=z())].forEach(t=>{t.n++;t.h+=hit;t.b+=bt;t.br+=br;t.ll+=ll;if(e.o!=null){t.no++;t.o+=(e.o>=.5)==(e.r[0]+e.r[1]>2)?1:0}});
   const k=mx<.45?'moins de 45 %':mx<=.6?'45 à 60 %':'plus de 60 %';G.bk[k].n++;G.bk[k].h+=hit;
@@ -106,7 +106,7 @@ function blendMarketOdds(m,ev,marketWeight=.95){
  }
 // Buteur : priorité à l'analyse OpenAI, avec repli statistique si la clé API est absente ou l'IA indisponible.
 const { pickScorer } = require('./scorer');
-const { buildHistoryEntry } = require('./history');
+const { buildHistoryEntry, isTemporallyVerified } = require('./history');
 const { pickScorerWithAI } = require('./ai_scorer');
 const { pickMatchWithAI } = require('./ai_match');
 // Avis d'experts : lus dans expert.js et appliqués AVANT le coup d'envoi seulement
@@ -121,7 +121,7 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
 (async()=>{
  const today=day(new Date()),from=day(off(-3)),last=day(off(6)),now=new Date(),hourKey=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit'}).format(now),parisWallNow=Date.parse(new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(now).replace(' ','T')+'Z'),S=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;
  const pj=fs.existsSync('data.json')?JSON.parse(fs.readFileSync('data.json')):{};
- const prev=(pj.matches||[]).filter(m=>m.lg!=='Championship'&&m.lg!=='Eredivisie'),hist=(pj.hist||[]).filter(e=>e.lg!=='Championship'&&e.lg!=='Eredivisie'),old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(hist);
+ const prev=(pj.matches||[]).filter(m=>m.lg!=='Championship'&&m.lg!=='Eredivisie'),hist=(pj.hist||[]).filter(e=>e.lg!=='Championship'&&e.lg!=='Eredivisie'),verifiedHist=hist.filter(isTemporallyVerified),old=Object.fromEntries(prev.map(m=>[m.id,m])),TT=temp(verifiedHist);
  let fx=(await get(`/matches?dateFrom=${from}&dateTo=${off(7).toISOString().slice(0,10)}`)).matches
   .filter(f=>CODES.includes(f.competition.code)&&day(new Date(f.utcDate))>=from&&day(new Date(f.utcDate))<=last);
  // La liste globale /matches peut ne pas remonter la Ligue 2 selon le périmètre
@@ -168,7 +168,7 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
   out.push({...m,d:day(new Date(f.utcDate)),h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(new Date(f.utcDate)),
    hc:f.homeTeam.crest||'',ac:f.awayTeam.crest||'',r:(f.status==='FINISHED'&&ft&&ft.home!=null)?[ft.home,ft.away]:null,
    liveStatus:f.status,liveScore,liveMinute:f.minute??null,liveAdded:f.injuryTime??null,
-   liveUpdatedAt:new Date().toISOString(),liveSource:'football-data.org'});seen.add(f.id)}
+   liveUpdatedAt:new Date().toISOString(),liveSource:'football-data.org',kickoffAt:f.utcDate,resultAvailableAt:m.resultAvailableAt||(f.status==='FINISHED'&&ft&&ft.home!=null?new Date().toISOString():null)});seen.add(f.id)}
  // Ligue 2 : secours ESPN, l'accès Football-Data à FL2 renvoie 403 avec la clé actuelle.
  try{
   const dates=Array.from({length:53},(_,i)=>day(off(i-45)).replace(/-/g,''));
@@ -422,7 +422,7 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
   if(!prior||(!prior.r&&m.r)||(!prior.p1&&m.p1))unique.set(key,m);
  });
  const all=[...unique.values()].sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
- const learn={};[...new Set(H2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(H2,lg)});learn._g=TT;
+ const verifiedH2=H2.filter(isTemporallyVerified),learn={};[...new Set(verifiedH2.map(e=>e.lg))].forEach(lg=>{learn[lg]=calib(verifiedH2,lg)});learn._g=TT;
  fs.writeFileSync('data.json',JSON.stringify({updatedAt:new Date().toISOString(),matches:all,hist:H2}));
  const fr=new Intl.DateTimeFormat('fr-FR',{...tz,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  fs.writeFileSync('data.js',`const DATE=${JSON.stringify(fr)};\nconst TODAY=${JSON.stringify(today)};\nconst UPDATED=${JSON.stringify(new Date().toISOString())};\nconst STAT=${JSON.stringify(aggregate(H2))};\nconst LEARN=${JSON.stringify(learn)};\nconst M=${JSON.stringify(all)};\n`);

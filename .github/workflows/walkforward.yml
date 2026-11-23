@@ -23,7 +23,24 @@ jobs:
       - name: Publier le résumé du backtest
         if: success()
         run: |
-          node -e "const fs=require('node:fs');const r=JSON.parse(fs.readFileSync('walkforward-report.json','utf8'));const pct=v=>v==null?'N/A':(v*100).toFixed(1)+'%';const lines=['## Backtest chronologique Pronokikz','',`- Matchs testés : **${r.matchesTested}**`,`- Matchs ignorés (historique insuffisant) : **${r.skipped.insufficientHistory}**`,`- Précision 1N2 : **${pct(r.accuracy1x2)}**`,`- Brier score : **${r.brierScore==null?'N/A':r.brierScore.toFixed(4)}**`,`- Log loss : **${r.logLoss==null?'N/A':r.logLoss.toFixed(4)}**`,`- BTTS : **${pct(r.bttsAccuracy)}**`,`- Plus de 2,5 buts : **${pct(r.over25Accuracy)}**`,''];if(r.matchesTested<100)lines.push('⚠️ Échantillon inférieur à 100 matchs : résultats indicatifs uniquement.');fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\\n')+'\\n');"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('walkforward-report.json', 'utf8'));
+          const pct = value => value == null ? 'N/A' : (value * 100).toFixed(1) + '%';
+          const lines = [
+            '## Backtest chronologique Pronokikz', '',
+            `- Matchs testés : **${report.matchesTested}**`,
+            `- Matchs ignorés (historique insuffisant ou sans preuve temporelle) : **${report.skipped.insufficientHistory}**`,
+            `- Précision 1N2 : **${pct(report.accuracy1x2)}**`,
+            `- Brier score : **${report.brierScore == null ? 'N/A' : report.brierScore.toFixed(4)}**`,
+            `- Log loss : **${report.logLoss == null ? 'N/A' : report.logLoss.toFixed(4)}**`,
+            `- BTTS : **${pct(report.bttsAccuracy)}**`,
+            `- Plus de 2,5 buts : **${pct(report.over25Accuracy)}**`, '',
+            report.temporalPolicy, ''
+          ];
+          if (report.matchesTested < 100) lines.push('⚠️ Échantillon inférieur à 100 matchs : résultats indicatifs uniquement.');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          NODE
       - name: Conserver le rapport détaillé
         if: success()
         uses: actions/upload-artifact@v4

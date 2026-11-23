@@ -56,13 +56,16 @@ for (const m of due) {
   const ev=findOddsMatch(events,m.home,m.away);
   if(!ev) { console.log('Pas de cote correspondante : '+m.home+' - '+m.away); continue; }
   m.mkOdds=ev.quotes; m.mkOddsAt=ev.oddsAt;
-  if(ev.p) {
+  if(Array.isArray(ev.p)&&ev.p.length===3) {
     const base=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
     const model=[base.p1,base.pN,base.p2],total=model.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0);
     if(model.every(Number.isFinite)&&total>0) {
-      const probs=model.map((x,i)=>0.15*x/total+0.85*ev.p[i]);
+      const marketTotal=ev.p.reduce((a,x)=>a+x,0);
+    if(!ev.p.every(Number.isFinite)||marketTotal<=0)continue;
+    const market=ev.p.map(x=>x/marketTotal);
+    const probs=model.map((x,i)=>0.05*x/total+0.95*market[i]);
       const sum=probs.reduce((s,x)=>s+x,0),final=probs.map(x=>Math.round(x/sum*1000)/1000);
-      m.mk=1; m.mkp=ev.p.map(x=>Math.round(x*1000)/1000);
+      m.mk=1; m.mkp=market.map(x=>Math.round(x*1000)/1000);
       m.b0=final; [m.p1,m.pN,m.p2]=final;
     }
     if(ev.o!=null&&base.o25!=null)m.o25=Math.round((0.5*base.o25+0.5*ev.o)*1000)/1000;
@@ -72,6 +75,14 @@ for (const m of due) {
 if(changed) {
   payload.updatedOddsAt=new Date().toISOString();
   fs.writeFileSync(file,JSON.stringify(payload));
+  const dataJs='data.js';
+  if(fs.existsSync(dataJs)) {
+    let source=fs.readFileSync(dataJs,'utf8');
+    const updated=source.replace(/const UPDATED=.*?;\n/,`const UPDATED=${JSON.stringify(payload.updatedOddsAt )};\n`)
+      .replace(/const M=.*?;\n/,`const M=${JSON.stringify(matches)};\n`);
+    if(updated===source) throw new Error('Impossible de synchroniser data.js : format généré inattendu');
+    fs.writeFileSync(dataJs,updated);
+  }
 }
 console.log('Cotes actualisées : '+changed+' match(s). Fenêtre : 24 h, fréquence 30 min au-delà de 2 h, 15 min entre 2 h et 15 min, puis 5 min avant le coup d’envoi.');
 })().catch(error => { console.error(error); process.exit(1); });

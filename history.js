@@ -25,6 +25,15 @@ function scorerHit(predicted, goals) {
   return names.some(name => normalizeName(name) === target);
 }
 
+function isTemporallyVerified(entry) {
+  if (!entry) return false;
+  const predictionAt = Date.parse(entry.predictionAt || entry.t);
+  const kickoffAt = Date.parse(entry.kickoffAt);
+  const resultAvailableAt = Date.parse(entry.resultAvailableAt);
+  return Number.isFinite(predictionAt) && Number.isFinite(kickoffAt) &&
+    Number.isFinite(resultAvailableAt) && predictionAt < kickoffAt && resultAvailableAt >= kickoffAt;
+}
+
 function buildHistoryEntry(match, goals) {
   const bt = predictedScorerName(match.bt);
   return {
@@ -40,6 +49,14 @@ function buildHistoryEntry(match, goals) {
     q: match.q || null,
     r: match.r,
     t: match.pt || null,
+    predictionAt: match.pt || null,
+    kickoffAt: match.kickoffAt || null,
+    resultAvailableAt: match.resultAvailableAt || null,
+    marketOddsAt: match.mkOddsAt || null,
+    selection: match.fin || null,
+    aiSelection: match.aiFin || null,
+    aiConfidence: Number.isFinite(match.aiConfidence) ? match.aiConfidence : null,
+    modelVersion: process.env.GITHUB_SHA || match.modelVersion || null,
     bt,
     bp: Number.isFinite(match.btp) ? match.btp : null,
     bs: match.btSource || 'unknown',
@@ -49,4 +66,4 @@ function buildHistoryEntry(match, goals) {
 }
 
 
-module.exports = { normalizeName, predictedScorerName, actualScorerNames, scorerHit, buildHistoryEntry };
+module.exports = { normalizeName, predictedScorerName, actualScorerNames, scorerHit, isTemporallyVerified, buildHistoryEntry };

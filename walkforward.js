@@ -45,7 +45,9 @@ function predictBeforeMatch(match, allMatches) {
   // Sans identifiant de compétition fiable, ne jamais mélanger les statistiques de plusieurs ligues.
   if (comp == null) return null;
   const prior=allMatches.filter(m=>{
-    if (!isFinished(m)||Date.parse(m.utcDate)>=kickoff) return false;
+    const availableAt = Date.parse(m.resultAvailableAt);
+    if (!isFinished(m) || Date.parse(m.utcDate) >= kickoff ||
+        !Number.isFinite(availableAt) || availableAt >= kickoff) return false;
     const key=m.competition&&(m.competition.code||m.competition.id||m.competition.name);
     return key===comp;
   });
@@ -69,7 +71,7 @@ function evaluateMatches(matches) {
     predictions.push({date:m.utcDate,competition:m.competition?.name||'Inconnue',home:m.homeTeam.name,away:m.awayTeam.name,score:`${hg}-${ag}`,probabilities:probs.map(v=>Number(v.toFixed(4))),predicted:['1','N','2'][best],correct:best===outcome,brier,logLoss:-Math.log(Math.max(1e-12,probs[outcome])),bttsProbability:p.btts,over25Probability:p.o25,priorMatches:p.priorMatches});
   }
   const n=predictions.length, sum=k=>predictions.reduce((s,p)=>s+p[k],0);
-  const report={matchesTested:n,accuracy1x2:n?sum('correct')/n:null,brierScore:n?sum('brier')/n:null,logLoss:n?sum('logLoss')/n:null,bttsAccuracy:null,over25Accuracy:null,skipped,predictions};
+  const report={matchesTested:n,accuracy1x2:n?sum('correct')/n:null,brierScore:n?sum('brier')/n:null,logLoss:n?sum('logLoss')/n:null,bttsAccuracy:null,over25Accuracy:null,skipped,temporalPolicy:'Un résultat antérieur est admissible uniquement si resultAvailableAt est enregistré et strictement antérieur au coup d’envoi du match évalué. Les archives sans preuve sont exclues.',predictions};
   if(n){
     report.bttsAccuracy=predictions.filter(p=>(p.bttsProbability>=.5)===(Number(p.score.split('-')[0])>0&&Number(p.score.split('-')[1])>0)).length/n;
     report.over25Accuracy=predictions.filter(p=>(p.over25Probability>=.5)===(Number(p.score.split('-')[0])+Number(p.score.split('-')[1])>2)).length/n;
@@ -83,11 +85,14 @@ async function main() {
   if(!key) throw new Error('Clé API manquante : FOOTBALL_DATA_API_KEY (ou FOOTBALL_DATA_KEY).');
   const codes=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,PPL,DED,ELC').split(',').map(s=>s.trim()).filter(Boolean);
   const now=new Date(), season=now.getUTCMonth()>=7?now.getUTCFullYear():now.getUTCFullYear()-1, all=[];
+  let archived=[];
+  try { archived=JSON.parse(require('node:fs').readFileSync('data.json','utf8')).hist||[]; } catch(e) { console.log('Archive local indisponible : '+e.message); }
+  const availabilityById=new Map(archived.filter(e=>e&&e.i!=null&&e.resultAvailableAt).map(e=>[String(e.i),e.resultAvailableAt]));
   for(let i=0;i<codes.length;i++){
     const code=codes[i], url=`https://api.football-data.org/v4/competitions/${encodeURIComponent(code)}/matches?season=${season}&status=FINISHED`;
     const response=await fetch(url,{headers:{'X-Auth-Token':key}});
     if(!response.ok) throw new Error(`${code}: API Football Data répond ${response.status}`);
-    const body=await response.json(); all.push(...(body.matches||[]));
+    const body=await response.json(); all.push(...(body.matches||[]).map(m=>({...m,resultAvailableAt:availabilityById.get(String(m.id))||null})));
     console.log(`${code}: ${(body.matches||[]).length} matchs terminés récupérés`);
     if(i<codes.length-1) await new Promise(resolve=>setTimeout(resolve,6500));
   }

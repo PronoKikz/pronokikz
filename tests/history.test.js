@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
-const { predictedScorerName, scorerHit, buildHistoryEntry } = require('../history');
+const { predictedScorerName, scorerHit, buildHistoryEntry, isTemporallyVerified } = require('../history');
 const { evaluateAdvice } = require('../mobile/adviceHistory');
 
 assert.equal(predictedScorerName('Kylian Mbappé (13 buts) · 72 % estimés'), 'Kylian Mbappé');
@@ -15,7 +15,8 @@ const entry = buildHistoryEntry({
   p1: 0.5, pN: 0.25, p2: 0.25, btts: 0.6, o25: 0.55,
   raw: { p1: 0.6, pN: 0.2, p2: 0.2 }, mkp: [0.45, 0.3, 0.25],
   x: [1.7, 1.1], q: [0.48, 0.27, 0.25], r: [2, 1],
-  pt: '2026-11-10T10:00:00.000Z',
+  pt: '2026-11-10T10:00:00.000Z', kickoffAt: '2026-11-10T12:00:00.000Z',
+  resultAvailableAt: '2026-11-10T14:00:00.000Z', mkOddsAt: '2026-11-10T09:55:00.000Z', fin: '1N', aiFin: '1', aiConfidence: 0.72,
   bt: 'Kylian Mbappé (13 buts) · 72 % estimés', btp: 0.72, btSource: 'openai'
 }, [{ scorer: { name: 'Kylian Mbappé' } }]);
 assert.equal(entry.bt, 'Kylian Mbappé');
@@ -25,6 +26,13 @@ assert.equal(entry.bp, 0.72);
 assert.equal(entry.bs, 'openai');
 assert.equal(entry.bh, true);
 assert.equal(entry.t, '2026-11-10T10:00:00.000Z');
+assert.equal(entry.kickoffAt, '2026-11-10T12:00:00.000Z');
+assert.equal(entry.resultAvailableAt, '2026-11-10T14:00:00.000Z');
+assert.equal(entry.selection, '1N');
+assert.equal(entry.aiSelection, '1');
+assert.equal(isTemporallyVerified(entry), true);
+assert.equal(isTemporallyVerified({...entry, resultAvailableAt: '2026-11-10T11:59:59.000Z'}), false);
+assert.equal(isTemporallyVerified({...entry, predictionAt: '2026-11-10T12:00:00.000Z'}), false);
 
 const adviceMatches = [
   { id: 1, r: [2, 0] },
