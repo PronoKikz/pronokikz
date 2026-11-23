@@ -78,8 +78,8 @@ if(changed) {
   const dataJs='data.js';
   if(fs.existsSync(dataJs)) {
     let source=fs.readFileSync(dataJs,'utf8');
-    const updated=source.replace(/const UPDATED=.*?;\\n/,`const UPDATED=${JSON.stringify(payload.updatedOddsAt)};\\n`)
-      .replace(/const M=.*?;\\n/,`const M=${JSON.stringify(matches)};\\n`);
+    const updated=source.replace(/const UPDATED=.*?;\n/,`const UPDATED=${JSON.stringify(payload.updatedOddsAt )};\n`)
+      .replace(/const M=.*?;\n/,`const M=${JSON.stringify(matches)};\\n`);
     if(updated===source) throw new Error('Impossible de synchroniser data.js : format généré inattendu');
     fs.writeFileSync(dataJs,updated);
   }
