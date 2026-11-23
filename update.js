@@ -78,7 +78,7 @@ function predict(H,A,avg,when,hh,cal){
  lh=Math.max(.3,lh*cal.gf*cal.hf);la=Math.max(.3,la*cal.gf/cal.hf);
  return{...model(lh,la),fm:[sum(p5(H)),sum(p5(A))],f10:[sum(p10(H)),sum(p10(A))],ng:[H.g,A.g],hh:[hh.w,hh.d,hh.l],x:[Math.round(lh*100)/100,Math.round(la*100)/100]}}
 function aggregate(hist){const z=()=>({n:0,h:0,b:0,no:0,o:0,br:0,ll:0}),G={tot:z(),lg:{},bk:{'moins de 45 %':{n:0,h:0},'45 à 60 %':{n:0,h:0},'plus de 60 %':{n:0,h:0}}},E=[0,.2,.35,.5,.65,.8,1.01],cal=E.slice(0,-1).map((lo,i)=>({a:lo,b:Math.min(1,E[i+1]),n:0,sp:0,h:0}));
- hist.forEach(e=>{const[p1,pN,p2]=e.p,o=e.r[0]>e.r[1]?0:e.r[0]==e.r[1]?1:2,mx=Math.max(p1,pN,p2),hit=e.p.indexOf(mx)===o?1:0,
+ hist.filter(isTemporallyVerified).forEach(e=>{const[p1,pN,p2]=e.p,o=e.r[0]>e.r[1]?0:e.r[0]==e.r[1]?1:2,mx=Math.max(p1,pN,p2),hit=e.p.indexOf(mx)===o?1:0,
   bt=(e.b>=.5)==(e.r[0]>0&&e.r[1]>0)?1:0,br=e.p.reduce((s,p,i)=>s+(p-(i===o?1:0))**2,0),ll=-Math.log(Math.max(1e-6,e.p[o]));
   [G.tot,G.lg[e.lg]||(G.lg[e.lg]=z())].forEach(t=>{t.n++;t.h+=hit;t.b+=bt;t.br+=br;t.ll+=ll;if(e.o!=null){t.no++;t.o+=(e.o>=.5)==(e.r[0]+e.r[1]>2)?1:0}});
   const k=mx<.45?'moins de 45 %':mx<=.6?'45 à 60 %':'plus de 60 %';G.bk[k].n++;G.bk[k].h+=hit;
