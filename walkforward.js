@@ -85,6 +85,9 @@ async function main() {
   if(!key) throw new Error('Clé API manquante : FOOTBALL_DATA_API_KEY (ou FOOTBALL_DATA_KEY).');
   const codes=(process.env.LEAGUES||'FL1,PL,PD,SA,BL1,PPL,DED,ELC').split(',').map(s=>s.trim()).filter(Boolean);
   const now=new Date(), season=now.getUTCMonth()>=7?now.getUTCFullYear():now.getUTCFullYear()-1, all=[];
+  let archived=[];
+  try { archived=JSON.parse(require('node:fs').readFileSync('data.json','utf8')).hist||[]; } catch(e) { console.log('Archive local indisponible : '+e.message); }
+  const availabilityById=new Map(archived.filter(e=>e&&e.i!=null&&e.resultAvailableAt).map(e=>[String(e.i),e.resultAvailableAt]));
   for(let i=0;i<codes.length;i++){
     const code=codes[i], url=`https://api.football-data.org/v4/competitions/${encodeURIComponent(code)}/matches?season=${season}&status=FINISHED`;
     const response=await fetch(url,{headers:{'X-Auth-Token':key}});
