@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('node:fs');
+const { isTemporallyVerified } = require('./history');
 
 function isProbability(value) {
   return Number.isFinite(value) && value >= 0 && value <= 1;
@@ -7,6 +8,7 @@ function isProbability(value) {
 
 function evaluate(history) {
   const valid = (history || []).filter(e => {
+    if (!isTemporallyVerified(e)) return false;
     if (!e || !Array.isArray(e.p) || e.p.length !== 3 || !e.p.every(isProbability)) return false;
     // Refuse malformed 1N2 distributions instead of silently scoring impossible probabilities.
     if (Math.abs(e.p.reduce((sum, value) => sum + value, 0) - 1) > 0.005) return false;
