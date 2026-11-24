@@ -133,7 +133,7 @@ const buildCombo = (matches: Match[], min: number, max: number, seed: number, mi
     else if(allowEstimated)markets.push({...base,market:'Les 2 équipes marquent : '+option.label,probability:option.probability,odds:1/option.probability,bookmaker:'Estimation du modèle',estimated:true});
    });
   }
-  const picks=markets.filter(p=>p.probability>=minProbability&&p.probability<=.94&&Number.isFinite(p.odds)&&p.odds>1);
+  const picks=markets.filter(p=>p.probability>=minProbability&&p.probability<=.94&&Number.isFinite(p.odds)&&p.odds>=2);
   if(picks.length)byMatch.push(picks);
  });
  if(byMatch.length<2)return null;
@@ -198,14 +198,14 @@ const buildMyBetCombo = (matches: Match[], seed: number): Combo | null => {
    myBets.push({...base,market:'MYBET estimé : '+a.label+' + '+b.label,probability:joint,odds:a.price*b.price,bookmaker:'Cote indicative, non fournie par un bookmaker',estimated:true});
   }));
   const ordinary:ComboPick[]=[];
-  const add=(market:string,p:number,q?:{price:number;bookmaker:string})=>{if(q&&q.price>1&&p>=0.3&&p<=0.9)ordinary.push({...base,market,probability:p,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt});};
+  const add=(market:string,p:number,q?:{price:number;bookmaker:string})=>{if(q&&q.price>=2&&p>=0.3&&p<=0.9)ordinary.push({...base,market,probability:p,odds:q.price,bookmaker:q.bookmaker,oddsAt:m.mkOddsAt});};
   if(advised==='1'||advised==='N'||advised==='2'){
    const i=advised==='1'?0:advised==='N'?1:2;
    add(advised==='1'?'Victoire domicile (1)':advised==='N'?'Match nul (N)':'Victoire extérieur (2)',[p1,pN,p2][i],[m.mkOdds?.h2h?.home,m.mkOdds?.h2h?.draw,m.mkOdds?.h2h?.away][i]);
   } else if(['1N','N2','12'].includes(advised)){
    const included=advised.split(''),prob=(included.includes('1')?p1:0)+(included.includes('N')?pN:0)+(included.includes('2')?p2:0);
    const qs=[m.mkOdds?.h2h?.home,m.mkOdds?.h2h?.draw,m.mkOdds?.h2h?.away],imp=qs.map(q=>q&&q.price>1?1/q.price:0),sum=imp.reduce((x,y)=>x+y,0),sel=imp.reduce((x,v,i)=>x+(included.includes(['1','N','2'][i])?v:0),0);
-   if(sum>0&&sel>0&&prob>=0.3&&prob<=0.9)ordinary.push({...base,market:'Double chance '+advised.split('').join('/'),probability:prob,odds:sum/sel,bookmaker:'Cote estimée depuis le marché 1N2',estimated:true});
+   if(sum>0&&sel>0&&sum/sel>=2&&prob>=0.3&&prob<=0.9)ordinary.push({...base,market:'Double chance '+advised.split('').join('/'),probability:prob,odds:sum/sel,bookmaker:'Cote estimée depuis le marché 1N2',estimated:true});
   }
   add('Plus de 2,5 buts',m.o25??0,m.mkOdds?.totals?.over25);
   add('Moins de 2,5 buts',m.o25==null?0:1-m.o25,m.mkOdds?.totals?.under25);
@@ -241,7 +241,7 @@ const buildInstinctPick = (matches: Match[], seed: number): Combo | null => {
    {market:'Victoire extérieur (2)',probability:p2,quote:q?.away}
   ];
   options.forEach(o=>{
-   if(o.quote&&Number.isFinite(o.quote.price)&&o.quote.price>=1.6&&o.quote.price<=8&&o.probability>=0.35&&o.probability<=0.85){
+   if(o.quote&&Number.isFinite(o.quote.price)&&o.quote.price>=2&&o.quote.price<=8&&o.probability>=0.35&&o.probability<=0.85){
     candidates.push({...base,market:o.market,probability:o.probability,odds:o.quote.price,bookmaker:o.quote.bookmaker,oddsAt:m.mkOddsAt});
    }
   });
@@ -275,7 +275,7 @@ const buildDailyQualityPicks = (matches: Match[], offsets: Record<number,number>
   const isDouble=selection.length===2;
   const minProbability=isDouble?0.72:0.60;
   const maxOdds=isDouble?2.5:2.8;
-  if(probability<minProbability||probability>0.95||odds<1.18||odds>maxOdds) return;
+  if(probability<minProbability||probability>0.95||odds<2||odds>maxOdds) return;
   // Écarter les pronostics dont le modèle est trop éloigné du marché sans explication.
   const edge=probability-marketProbability;
   if(edge < -0.08) return;
@@ -313,7 +313,7 @@ const buildDailyParlay = (matches: Match[], seed: number, count: number): Combo 
  const odds=picks.reduce((total,pick)=>total*pick.odds,1);
  const probability=picks.reduce((total,pick)=>total*pick.probability,1);
  const maxOdds=count===2?4.5:count===3?8:12;
- if(!Number.isFinite(odds)||odds<1.5||odds>maxOdds)return null;
+ if(!Number.isFinite(odds)||odds<2||odds>maxOdds)return null;
  return {picks,odds,probability};
 };
 
