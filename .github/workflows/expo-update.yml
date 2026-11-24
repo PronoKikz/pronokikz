@@ -12,6 +12,7 @@ on:
       - "mobile/assets/**"
       - "mobile/package.json"
       - "mobile/package-lock.json"
+      - "data.json"
 
 permissions:
   contents: read
