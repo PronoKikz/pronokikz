@@ -428,3 +428,5 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
  fs.writeFileSync('data.js',`const DATE=${JSON.stringify(fr)};\nconst TODAY=${JSON.stringify(today)};\nconst UPDATED=${JSON.stringify(new Date().toISOString())};\nconst STAT=${JSON.stringify(aggregate(H2))};\nconst LEARN=${JSON.stringify(learn)};\nconst M=${JSON.stringify(all)};\n`);
  const nb={};all.forEach(m=>nb[m.d]=(nb[m.d]||0)+1);console.log(all.length+' matchs',JSON.stringify(nb),'| calibration T='+TT.T+' nuls×'+TT.dr+' (n='+TT.n+')','| historique',H2.length,OD?'| cotes marché activées':'| sans cotes marché');
 })().catch(e=>{console.error(e.message);process.exit(1)});
+
+// Déclenchement de la synchronisation des résultats terminés du 24/11/2026.
