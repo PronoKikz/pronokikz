@@ -20,7 +20,7 @@ function clockOf(event,comp){
  const from=day(-1),to=day(2);
  if(KEY){
   const packs=await Promise.all(LEAGUES.map(async c=>{try{const r=await fetch('https://api.football-data.org/v4/competitions/'+c+'/matches?dateFrom='+from+'&dateTo='+to,{headers:{'X-Auth-Token':KEY}});if(!r.ok)throw Error('HTTP '+r.status);return (await r.json()).matches||[];}catch(e){console.log('Football-Data '+c+': '+e.message);return [];}}));
-  for(const x of packs.flat()){const m=byId.get(String(x.id)),st=mapStatus(x.status);if(!m||!st)continue;updates.set(String(m.id),{status:st,score:score(x.score?.fullTime?.home,x.score?.fullTime?.away),minute:null,added:null,source:'Football-Data'});}
+  for(const x of packs.flat()){const m=byId.get(String(x.id)),st=mapStatus(x.status);if(!m||!st)continue;updates.set(String(m.id),{status:st,score:score(x.score?.fullTime?.home,x.score?.fullTime?.away),minute:x.minute!=null&&Number.isFinite(Number(x.minute))?Number(x.minute):null,added:x.injuryTime!=null&&Number.isFinite(Number(x.injuryTime))?Number(x.injuryTime):null,source:'Football-Data'});}
  }
  const dates=[-1,0,1,2].map(n=>day(n).replace(/-/g,''));
  const packs=await Promise.all(ESPN.flatMap(l=>dates.map(async d=>{try{const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+l+'/scoreboard?dates='+d);if(!r.ok)throw Error('HTTP '+r.status);return (await r.json()).events||[];}catch(e){console.log('ESPN '+l+': '+e.message);return [];}})));
@@ -31,7 +31,7 @@ function clockOf(event,comp){
   let m=null;if(league==='uefa.nations')m=byId.get('nations-'+e.id);if(league==='uefa.wchampions')m=byId.get('uwcl-'+e.id);
   if(!m){const d=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(e.date));const hn=norm(h.team?.displayName||h.team?.name),an=norm(a.team?.displayName||a.team?.name);m=matches.find(x=>x.d===d&&norm(x.home)===hn&&norm(x.away)===an);}
   if(!m)continue;const cl=st==='IN_PLAY'?clockOf(e,c):{minute:null,added:null};
-  updates.set(String(m.id),{status:st,score:score(h.score,a.score),minute:cl.minute,added:cl.added,source:'ESPN'});
+  const prior=updates.get(String(m.id));const authoritativeMinute=prior?.minute!=null;updates.set(String(m.id),{status:st,score:score(h.score,a.score)||prior?.score||null,minute:authoritativeMinute?prior.minute:cl.minute,added:authoritativeMinute?prior.added:cl.added,source:authoritativeMinute?'Football-Data + ESPN':'ESPN'});
  }}
  const now=new Date().toISOString();let changed=0;
  for(const m of matches){const u=updates.get(String(m.id));if(!u){
