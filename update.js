@@ -92,7 +92,7 @@ async function oddsFor(code){
 }
 // Mélange les probabilités du modèle avec les probabilités implicites du marché.
  // Le marché p est déjà normalisé sans marge bookmaker dans oddsFor().
- // Priorité au consensus bookmaker : 95 % marché, 5 % modèle statistique.
+ // Pondération équilibrée : 70 % consensus bookmaker, 30 % modèle statistique, pour limiter la dépendance à une cote ponctuelle ou périmée.
 function blendMarketOdds(m,ev,marketWeight=.95){
   if(!ev||!Array.isArray(ev.p)||ev.p.length!==3)return {...m,mkOdds:ev&&ev.quotes||m.mkOdds||null,mkOddsAt:ev&&ev.oddsAt||m.mkOddsAt};
   const base=m.raw||{p1:m.b0?.[0]??m.p1,pN:m.b0?.[1]??m.pN,p2:m.b0?.[2]??m.p2};
@@ -159,7 +159,7 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
     m={...m,mkAt:refreshKey};
     if(ev){m={...m,mkOdds:ev.quotes||null,mkOddsAt:ev.oddsAt||new Date().toISOString()};
      if(ev.p){const raw=m.raw||{p1:m.p1,pN:m.pN,p2:m.p2,o25:m.o25};
-      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.05*raw.p1+.95*ev.p[0]),r3(.05*raw.pN+.95*ev.p[1]),r3(.05*raw.p2+.95*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
+      m={...m,raw,mk:1,mkp:ev.p.map(r3),b0:[r3(.30*raw.p1+.70*ev.p[0]),r3(.30*raw.pN+.70*ev.p[1]),r3(.30*raw.p2+.70*ev.p[2])],o25:ev.o!=null&&raw.o25!=null?r3(.5*raw.o25+.5*ev.o):m.o25}}}
    }
    // 3) avis d'experts (aj, fin, buteur manuel) puis horodatage du prono
    m={...applyExperts(m),pt:new Date().toISOString()};
@@ -220,7 +220,7 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
     p1:r3(px.p1),pN:r3(px.pN),p2:r3(px.p2),btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,fm:px.fm,f10:px.f10,ng:px.ng,hh:px.hh,x:px.x,r:score,lock:started?1:0,
     ia:'Pronostic Ligue 2 via ESPN : forme récente, buts marqués/encaissés et avantage domicile. Buts attendus lissés selon '+px.sample+' matchs récents.'+(Math.min(H.g,A.g)<6?' Échantillon court : probabilité ramenée vers la moyenne du championnat.':'')+(OD?' Cotes bookmakers intégrées uniquement si disponibles.':' Cotes bookmakers indisponibles : estimation statistique prudente.'),pt:new Date().toISOString(),b0:[r3(px.p1),r3(px.pN),r3(px.p2)]};
    if(started&&oldFl)m={...m,...oldFl,d,h:m.h,r:score||oldFl.r||null,lock:1};
-   else{const ev=findFl2Odds(e.hn,e.an);if(ev){m=blendMarketOdds(m,ev,.85);fl2MarketMatched++}else{m={...m,marketStatus:OD?'unmatched':'missing_api_key',ia:m.ia+' ATTENTION : aucune cote bookmaker 1N2 récupérée pour ce match ; probabilité issue du modèle statistique seul, confiance réduite.'}}m=applyExperts(m)}
+   else{const ev=findFl2Odds(e.hn,e.an);if(ev){m=blendMarketOdds(m,ev,.75);fl2MarketMatched++}else{m={...m,marketStatus:OD?'unmatched':'missing_api_key',ia:m.ia+' ATTENTION : aucune cote bookmaker 1N2 récupérée pour ce match ; probabilité issue du modèle statistique seul, confiance réduite.'}}m=applyExperts(m)}
    out.push(m);seen.add(id);added++;
   }
   console.log('Ligue 2 ESPN : '+parsed.length+' événements, '+sw+' matchs de forme, '+added+' matchs ajoutés, '+fl2MarketMatched+' marchés bookmakers associés sur '+added+' matchs. Clé APIFOOTBALL_API_KEY '+(OD?'présente':'absente')+'.');
