@@ -5,6 +5,7 @@ const LEAGUES=[...new Set((process.env.LEAGUES||'FL1,PL,PD,SA,BL1,CL,PPL,ELC,FL2
 const ESPN=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','uefa.champions','uefa.europa','uefa.nations','uefa.wchampions'];
 const day=n=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(Date.now()+n*864e5));
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const teamKey=s=>{const n=norm(s);return ({'psg':'paris saint germain','paris sg':'paris saint germain','paris saint germain':'paris saint germain','roma':'as roma','as roma':'as roma','atleti':'atletico madrid','atletico':'atletico madrid','man united':'manchester united','man utd':'manchester united','shaktar':'shakhtar donetsk','shakhtar':'shakhtar donetsk','bayern':'bayern munich'})[n]||n;};
 const score=(h,a)=>h!=null&&a!=null&&Number.isFinite(Number(h))&&Number.isFinite(Number(a))?[Number(h),Number(a)]:null;
 const mapStatus=s=>({IN_PLAY:'IN_PLAY',PAUSED:'PAUSED',FINISHED:'FINISHED',SUSPENDED:'SUSPENDED',POSTPONED:'POSTPONED',CANCELLED:'CANCELLED',AWARDED:'FINISHED'})[s]||null;
 // Horloge ESPN de l'événement correspondant uniquement. Aucun calcul local de minute.
@@ -29,7 +30,7 @@ function clockOf(event,comp){
   const type=c?.status?.type||e.status?.type||{},state=String(type.state||'').toLowerCase();
   const detail=[type.name,type.description,type.detail,type.shortDetail].filter(Boolean).join(' ');const halftime=/half.?time|halftime|break/i.test(detail);const st=type.completed||state==='post'?'FINISHED':halftime?'PAUSED':state==='in'?'IN_PLAY':null;if(!st)continue;
   let m=null;if(league==='uefa.nations')m=byId.get('nations-'+e.id);if(league==='uefa.wchampions')m=byId.get('uwcl-'+e.id);
-  if(!m){const d=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(e.date));const hn=norm(h.team?.displayName||h.team?.name),an=norm(a.team?.displayName||a.team?.name);m=matches.find(x=>x.d===d&&norm(x.home)===hn&&norm(x.away)===an);}
+  if(!m){const d=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(e.date));const hn=norm(h.team?.displayName||h.team?.name),an=norm(a.team?.displayName||a.team?.name);m=matches.find(x=>x.d===d&&teamKey(x.home)===teamKey(hn)&&teamKey(x.away)===teamKey(an));}
   if(!m)continue;const cl=st==='IN_PLAY'?clockOf(e,c):{minute:null,added:null};
   const prior=updates.get(String(m.id));const authoritativeMinute=prior?.minute!=null;updates.set(String(m.id),{status:st,score:score(h.score,a.score)||prior?.score||null,minute:authoritativeMinute?prior.minute:cl.minute,added:authoritativeMinute?prior.added:cl.added,source:authoritativeMinute?'Football-Data + ESPN':'ESPN'});
  }}
