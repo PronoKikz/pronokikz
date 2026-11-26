@@ -224,7 +224,7 @@ function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/
  e.appendChild(h('div','row3',null,add(X(k),'x2',k,pk,'Résultat '+X(k)),add('BTTS '+(m.btts>=.5?'oui':'non'),'btts',m.btts>=.5?'oui':'non',Math.max(m.btts,1-m.btts),'BTTS '+(m.btts>=.5?'oui':'non')),m.o25!=null?add(m.o25>=.5?'+2,5':'-2,5','o25',m.o25>=.5?'plus':'moins',Math.max(m.o25,1-m.o25),(m.o25>=.5?'+2,5':'-2,5')+' buts'):h('div',null,'')));
  if(m.scs)e.appendChild(h('p','ia','🎯 Scores probables : '+m.scs.map(([x,p])=>x+' ('+pc(p)+')').join(' · ')));
  if(m.aiWhy)e.appendChild(h('p','ia','🧠 Mon analyse · confiance '+(m.aiConfidence||'–')+'/100 : '+m.aiWhy+(m.aiRisk?' Risque : '+m.aiRisk:'')));
- if(m.mk)e.appendChild(h('p','ia','💹 Pronos mélangés avec les cotes des bookmakers'+(vb?' · le modèle voit plus de chances que le marché sur au moins un résultat (💎 Value)':'')));
+ if(m.mk)e.appendChild(h('p','ia','💹 Probabilités 70 % marché bookmakers / 30 % modèle statistique'+(vb?' · écart favorable détecté sur au moins un résultat (💎 Value)':'')));
  if(m.fm)e.appendChild(h('p','ia','📈 Forme (5 / 10 derniers) : '+m.fm[0]+(m.f10?' / '+m.f10[0]:'')+' pts – '+m.fm[1]+(m.f10?' / '+m.f10[1]:'')+' pts'));
  if(m.hh&&m.hh[0]+m.hh[1]+m.hh[2]>0)e.appendChild(h('p','ia','🤝 Confrontations directes : '+m.hh[0]+' V · '+m.hh[1]+' N · '+m.hh[2]+' D pour '+m.home));
  if(m.pt)e.appendChild(h('p','ia','🔒 Prono enregistré le '+new Date(m.pt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(m.lock?' · figé depuis le coup d’envoi, jamais modifié':' · il sera figé au coup d’envoi')));
@@ -355,7 +355,7 @@ function nations(){const L=M.filter(m=>m.lg===NLG&&m.d>=TD).sort((a,b)=>(a.d+a.h
 const dlabel=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:00'))/864e5);return n==-2?'Avant-hier':n==-1?'Hier':n==0?'Aujourd’hui':n==1?'Demain':new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})};
 function dayTabs(){const past=[-2,-1].map(dayStr).filter(d=>M.some(m=>m.d===d)),fut=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort().slice(0,3);
  [...past,...fut].forEach(d=>{const b=h('button',day==d?'on':'',dlabel(d));b.onclick=()=>{day=d;F.lg='';render()};$('tabs').appendChild(b)})}
-function pickRow(m){const op=[['x2:1','Victoire '+teamName(m.home),m.p1],['x2:N','Match nul',m.pN],['x2:2','Victoire '+teamName(m.away),m.p2],['x2:1N','1X : '+teamName(m.home)+' ou nul',m.p1+m.pN],['x2:N2','X2 : '+teamName(m.away)+' ou nul',m.pN+m.p2],['x2:12','1/2 : pas de nul',m.p1+m.p2],['btts:oui','BTTS oui',m.btts],['btts:non','BTTS non',1-m.btts]];
+function pickRow(m){const p=marketAware1x2(m),op=[['x2:1','Victoire '+teamName(m.home),p[0]],['x2:N','Match nul',p[1]],['x2:2','Victoire '+teamName(m.away),p[2]],['x2:1N','1X : '+teamName(m.home)+' ou nul',p[0]+p[1]],['x2:N2','X2 : '+teamName(m.away)+' ou nul',p[1]+p[2]],['x2:12','1/2 : pas de nul',p[0]+p[2]],['btts:oui','BTTS oui',m.btts],['btts:non','BTTS non',1-m.btts]];
  if(m.o15!=null)op.push(['o15:plus','+1,5 buts',m.o15]);if(m.o25!=null)op.push(['o25:plus','+2,5 buts',m.o25],['o25:moins','-2,5 buts',1-m.o25]);
  const sel=h('select','inp');op.forEach(([v,t,p])=>{const o=h('option',null,t+' · '+pc(p));o.value=v;sel.appendChild(o)});sel.value='x2:'+m.fin;
  const b=h('button','addb','➕ Ajouter');b.onclick=()=>{const o=op.find(x=>x[0]===sel.value),[kd,sd]=sel.value.split(':');addBet(m,kd,sd,o[1],o[2])};
