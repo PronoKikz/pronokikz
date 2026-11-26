@@ -170,9 +170,24 @@ function comboLegs(m){
  return out;
 }
 function dailyComboCands(open,minP,maxP,maxLegs,target,minLegs){
- const pool=beam(open,.65,maxLegs,comboLegs).filter(x=>x.l.length>=(minLegs||2)&&x.p>=minP&&x.p<=maxP);
+ let states=[{l:[],p:1}],pool=[];
+ const required=minLegs||2;
+ open.forEach(m=>{
+  const next=states.slice(),opts=comboLegs(m);
+  states.forEach(s=>{
+   if(s.l.length>=maxLegs)return;
+   opts.forEach(o=>{
+    const p=s.p*o.p;
+    if(p<minP)return;
+    const n={l:[...s.l,o],p};
+    next.push(n);
+    if(n.l.length>=required&&p<=maxP)pool.push(n);
+   });
+  });
+  states=next.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target)).slice(0,1800);
+ });
  pool.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target)||b.l.length-a.l.length);
- return diversify(pool,3);
+ return diversify(pool.slice(0,400),3);
 }
 function comboSection(title,cls,items,note){
  if(!items.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',title),h('p','ia','Aucun combiné suffisamment cohérent dans cette fourchette aujourd’hui. Je préfère ne pas inventer de sélection.')));return}
