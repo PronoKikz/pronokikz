@@ -68,7 +68,7 @@ const pp=x=>x<.1?(x*100).toFixed(1).replace('.',',')+'%':Math.round(x*100)+'%',p
 const X=s=>s==='12'?'1/2':s.replace(/N/g,'X'),nz=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 const TD=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date());
 const EX=typeof EXPERTS!=='undefined'?EXPERTS:[];
-const marketAware1x2=m=>{const model=[m.p1??0,m.pN??0,m.p2??0];if(m.mkp&&m.mkp.length===3)return model;const q=m.mkOdds&&m.mkOdds.h2h,prices=q&&[q.home&&q.home.price,q.draw&&q.draw.price,q.away&&q.away.price];if(!prices||!prices.every(x=>Number.isFinite(x)&&x>1))return model;const raw=prices.map(x=>1/x),sum=raw.reduce((a,b)=>a+b,0);return sum?model.map((p,i)=>.15*p+.85*raw[i]/sum):model;};
+const marketAware1x2=m=>{const model=[m.p1??0,m.pN??0,m.p2??0],sumModel=model.reduce((a,b)=>a+b,0);if(!sumModel)return model;const normalized=model.map(x=>x/sumModel);let market=null;if(Array.isArray(m.mkp)&&m.mkp.length===3&&m.mkp.every(x=>Number.isFinite(x)&&x>0)){const z=m.mkp.reduce((a,b)=>a+b,0);market=m.mkp.map(x=>x/z)}else{const q=m.mkOdds&&m.mkOdds.h2h,prices=q&&[q.home&&q.home.price,q.draw&&q.draw.price,q.away&&q.away.price];if(prices&&prices.every(x=>Number.isFinite(x)&&x>1)){const raw=prices.map(x=>1/x),z=raw.reduce((a,b)=>a+b,0);market=raw.map(x=>x/z)}}return market?normalized.map((p,i)=>.30*p+.70*market[i]):normalized;};
 const sg=m=>{const p=marketAware1x2(m);return [['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1])[0]};
 const dc=m=>{const p=marketAware1x2(m);return [['1N',p[0]+p[1]],['N2',p[1]+p[2]],['12',p[0]+p[2]]]};
 const pf=(m,f)=>{const p=marketAware1x2(m);return f.split('').reduce((a,c)=>a+(c=='1'?p[0]:c=='N'?p[1]:p[2]),0)};
@@ -209,13 +209,13 @@ function liveFresh(m){if(!m||!['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveSt
 function liveNode(m){if(!m.liveStatus||!liveFresh(m))return null;const st=effectiveLiveStatus(m),n=h('div','live-status '+(st==='PAUSED'?'paused':st==='FINISHED'?'finished':st==='IN_PLAY'?'':'other'),liveText(m));n.dataset.liveId=String(m.id);return n}
 function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/(\d+)-(\d+)/)||(m.ia||'').match(/(\d)-(\d)/),ci=conf(m,pk),cf=['Confiance '+ci,ci>=65?'g':ci>=40?'y':''];
  const ring=h('div','ring',null,h('b',null,sc?sc[1]+' : '+sc[2]:'–'),h('span','pr','PRONO '+X(k)));ring.style.cssText='--p:'+Math.round(pk*100);
- const B=(l,p,on)=>h('div','btn'+(on?' on':''),null,h('small',null,l),h('b',null,pc(p))),
-  DC=[['1X',m.p1+m.pN,'1N'],['X2',m.pN+m.p2,'N2'],['1/2',m.p1+m.p2,'12']].map(([l,p,c])=>h('div','tag'+(k==c?' on':''),l+' '+pc(p)));
+ const mp=marketAware1x2(m),B=(l,p,on)=>h('div','btn'+(on?' on':''),null,h('small',null,l),h('b',null,pc(p))),
+  DC=[['1X',mp[0]+mp[1],'1N'],['X2',mp[1]+mp[2],'N2'],['1/2',mp[0]+mp[2],'12']].map(([l,p,c])=>h('div','tag'+(k==c?' on':''),l+' '+pc(p)));
  const vb=m.mkp&&m.raw&&[m.raw.p1-m.mkp[0],m.raw.pN-m.mkp[1],m.raw.p2-m.mkp[2]].some(x=>x>=.06),sh=h('button','shr','📤');sh.onclick=()=>share(m);
  const e=h('div','card',null,
   h('div','top',null,h('span','mu',m.lg+' · '+m.h),h('span','chips',null,vb?h('span','chip y','💎 Value'):null,h('span','chip '+cf[1],cf[0]),c&&h('span','chip '+(c.r?'g':'r'),c.r?'✓ GAGNÉ':'✗ PERDU'),sh)),
   h('div','teams',null,crest(m.hc,m.home),ring,crest(m.ac,m.away)),
-  h('div','row3',null,B('1',m.p1,k.includes('1')),B('X',m.pN,k.includes('N')),B('2',m.p2,k.includes('2'))),
+  h('div','row3',null,B('1',mp[0],k.includes('1')),B('X',mp[1],k.includes('N')),B('2',mp[2],k.includes('2'))),
   h('div','row3 dc',null,...DC),
   h('div','gg',null,h('div','tag'+(m.btts>=.5?' on':''),'BTTS OUI '+pc(m.btts)),h('div','tag'+(m.btts<.5?' on':''),'BTTS NON '+pc(1-m.btts))));
  e.dataset.matchId=String(m.id);const live=liveNode(m);if(live)e.appendChild(live);
