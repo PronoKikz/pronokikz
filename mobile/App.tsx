@@ -191,7 +191,7 @@ const buildMyBetCombo = (matches: Match[], seed: number): Combo | null => {
    if(m.mkOdds?.btts?.no)extras.push({label:'BTTS NON',probability:1-m.btts,price:m.mkOdds.btts.no.price});
   }
   outcomes.forEach(a=>extras.forEach(b=>{
-   if(!a.price||!b.price||a.price<2||b.price<2)return;
+   if(!a.price||!b.price||a.price<1.25||b.price<1.25)return;
    // Conservative Fréchet lower bound for the probability of both events.
    const joint=Math.max(0,a.probability+b.probability-1);
    if(joint<0.12||joint>0.9)return;
@@ -325,30 +325,49 @@ const buildDailyLongshotPicks = (matches: Match[], offsets: Record<number,number
 };
 
 const buildDailyParlay = (matches: Match[], seed: number, count: number): Combo | null => {
- const candidates=buildDailyQualityPicks(matches,{},100)
-  .flatMap(item=>item.combo.picks)
-  .sort((a,b)=>b.probability-a.probability||(b.edge||0)-(a.edge||0));
- if(candidates.length<count)return null;
- const targetMin=count===4?18:count===3?7.5:3.8;
- const targetMax=count===4?22:count===3?16:12;
- const pool=candidates.slice(0,24),valid:Combo[]=[];
- const walk=(start:number,picks:ComboPick[],odds:number,probability:number)=>{
-  if(picks.length===count){
-   if(odds>=targetMin&&odds<=targetMax)valid.push({picks:[...picks],odds,probability});
-   return;
+ const candidates: ComboPick[]=[];
+ matches.forEach(m=>{
+  if(!hasFreshMarketOdds(m,12))return;
+  const [p1,pN,p2]=effective1x2(m);
+  const base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
+  const add=(market:string,probability:number,quote?:{price:number;bookmaker:string},marketProbability?:number)=>{
+   if(!quote||!Number.isFinite(quote.price)||quote.price<1.25||quote.price>6)return;
+   if(!Number.isFinite(probability)||probability<0.52||probability>0.94||!Number.isFinite(marketProbability))return;
+   const edge=probability-marketProbability!;
+   const expectedValue=probability*quote.price-1;
+   if(edge<0.015||expectedValue< -0.03)return;
+   candidates.push({...base,market,probability,odds:quote.price,bookmaker:quote.bookmaker,oddsAt:m.mkOddsAt,edge});
+  };
+  const qs=[m.mkOdds?.h2h?.home,m.mkOdds?.h2h?.draw,m.mkOdds?.h2h?.away];
+  if(qs.every(q=>q&&Number.isFinite(q.price)&&q.price>1)){
+   const imp=qs.map(q=>1/q!.price),sum=imp.reduce((a,b)=>a+b,0);
+   if(sum>0){add('Victoire domicile (1)',p1,qs[0],imp[0]/sum);add('Match nul (N)',pN,qs[1],imp[1]/sum);add('Victoire extérieur (2)',p2,qs[2],imp[2]/sum);}
   }
+  const binary=(label:string,p:number,yes?:{price:number;bookmaker:string},no?:{price:number;bookmaker:string})=>{
+   if(!yes||!no||yes.price<=1||no.price<=1)return;
+   const iy=1/yes.price,inn=1/no.price,total=iy+inn;
+   if(total>0){add(label,p,yes,iy/total);add(label.replace('OUI','NON'),1-p,no,inn/total);}
+  };
+  if(m.o25!=null)binary('Plus de 2,5 buts',m.o25,m.mkOdds?.totals?.over25,m.mkOdds?.totals?.under25);
+  if(m.btts!=null)binary('Les 2 équipes marquent : OUI',m.btts,m.mkOdds?.btts?.yes,m.mkOdds?.btts?.no);
+ });
+ const unique=candidates.sort((a,b)=>b.probability-a.probability||(b.edge||0)-(a.edge||0)).filter((p,i,arr)=>arr.findIndex(x=>x.id===p.id&&x.market===p.market)===i);
+ if(unique.length<count)return null;
+ const targetMin=count===2?2:count===3?2.5:3.5;
+ const targetMax=count===2?8:count===3?15:25;
+ const pool=unique.slice(0,32),valid:Combo[]=[];
+ const walk=(start:number,picks:ComboPick[],odds:number,probability:number)=>{
+  if(picks.length===count){if(odds>=targetMin&&odds<=targetMax)valid.push({picks:[...picks],odds,probability});return;}
   for(let i=start;i<pool.length;i++){
-   const pick=pool[i];
-   if(picks.some(item=>item.id===pick.id))continue;
-   const nextOdds=odds*pick.odds;
-   if(nextOdds>targetMax)continue;
-   walk(i+1,[...picks,pick],nextOdds,probability*pick.probability);
+   const pick=pool[i];if(picks.some(x=>x.id===pick.id))continue;
+   const next=odds*pick.odds;if(next>targetMax)continue;
+   walk(i+1,[...picks,pick],next,probability*pick.probability);
   }
  };
  walk(0,[],1,1);
  if(!valid.length)return null;
- valid.sort((a,b)=>b.probability-a.probability||Math.abs(a.odds-(count===4?20:targetMin+targetMax)/2)-Math.abs(b.odds-(count===4?20:targetMin+targetMax)/2));
- const top=valid.slice(0,Math.min(8,valid.length));
+ valid.sort((a,b)=>b.probability-a.probability||a.odds-b.odds);
+ const top=valid.slice(0,Math.min(12,valid.length));
  return top[Math.abs(Math.trunc(seed))%top.length];
 };
 
