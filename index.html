@@ -69,6 +69,7 @@ const X=s=>s==='12'?'1/2':s.replace(/N/g,'X'),nz=s=>String(s).toLowerCase().norm
 const TD=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date());
 const EX=typeof EXPERTS!=='undefined'?EXPERTS:[];
 const marketAware1x2=m=>{const model=[m.p1??0,m.pN??0,m.p2??0],sumModel=model.reduce((a,b)=>a+b,0);if(!sumModel)return model;const normalized=model.map(x=>x/sumModel);let market=null;if(Array.isArray(m.mkp)&&m.mkp.length===3&&m.mkp.every(x=>Number.isFinite(x)&&x>0)){const z=m.mkp.reduce((a,b)=>a+b,0);market=m.mkp.map(x=>x/z)}else{const q=m.mkOdds&&m.mkOdds.h2h,prices=q&&[q.home&&q.home.price,q.draw&&q.draw.price,q.away&&q.away.price];if(prices&&prices.every(x=>Number.isFinite(x)&&x>1)){const raw=prices.map(x=>1/x),z=raw.reduce((a,b)=>a+b,0);market=raw.map(x=>x/z)}}return market?normalized.map((p,i)=>.30*p+.70*market[i]):normalized;};
+const marketAwareOver25=m=>{const model=m.o25;if(!Number.isFinite(model))return model;const t=m.mkOdds&&m.mkOdds.totals,over=t&&t.over25&&t.over25.price,under=t&&t.under25&&t.under25.price;if(!(Number.isFinite(over)&&over>1&&Number.isFinite(under)&&under>1))return model;const a=1/over,b=1/under,market=a/(a+b);return .30*model+.70*market;};
 const sg=m=>{const p=marketAware1x2(m);return [['1',p[0]],['N',p[1]],['2',p[2]]].sort((a,b)=>b[1]-a[1])[0]};
 const dc=m=>{const p=marketAware1x2(m);return [['1N',p[0]+p[1]],['N2',p[1]+p[2]],['12',p[0]+p[2]]]};
 const pf=(m,f)=>{const p=marketAware1x2(m);return f.split('').reduce((a,c)=>a+(c=='1'?p[0]:c=='N'?p[1]:p[2]),0)};
@@ -177,7 +178,7 @@ function comboSection(title,cls,items,note){
 function valueCands(open){return targetCands(open,1/6,.14,.20,allLegs)}
 function funCands(open){return targetCands(open,.025,.02,.03,allLegs)}
 function palier(c,thr){const out=[];thr.forEach(t=>{const b=c.find(x=>x.p<=t+1e-9&&!out.includes(x));if(b)out.push(b)});return out}
-function share(m){const t=`${nm(m)} (${m.lg} ${m.h})\nProno : ${X(m.fin)} · BTTS ${m.btts>=.5?'OUI':'NON'}${m.o25!=null?' · '+(m.o25>=.5?'+2,5':'-2,5')+' buts':''}${m.bt?'\nButeur : '+m.bt:''}`;
+function share(m){const t=`${nm(m)} (${m.lg} ${m.h})\nProno : ${X(m.fin)} · BTTS ${m.btts>=.5?'OUI':'NON'}${m.o25!=null?' · '+(o25p>=.5?'+2,5':'-2,5')+' buts':''}${m.bt?'\nButeur : '+m.bt:''}`;
  if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t)}
 function crest(u,n){const w=h('div',null,null);if(u){const i=h('img','crest');i.src=u;i.alt='';i.loading='lazy';i.onerror=()=>{i.style.display='none'};w.appendChild(i)}w.appendChild(h('div',null,teamName(n)));return w}
 function conf(m,pk){let v=Math.round(Math.max(0,Math.min(1,(pk-.34)/.5))*100);if(m.mkp){const a=x=>x.indexOf(Math.max(...x));if(a(m.mkp)===a([m.p1,m.pN,m.p2]))v+=8}if(m.ng&&Math.min(...m.ng)<6)v-=10;return Math.max(0,Math.min(100,v))}
@@ -207,7 +208,7 @@ function liveText(m){
 }
 function liveFresh(m){if(!m||!['IN_PLAY','PAUSED','SUSPENDED'].includes(m.liveStatus))return true;const t=Date.parse(m.liveUpdatedAt||'');return Number.isFinite(t)&&Date.now()-t<=10*60*1000}
 function liveNode(m){if(!m.liveStatus||!liveFresh(m))return null;const st=effectiveLiveStatus(m),n=h('div','live-status '+(st==='PAUSED'?'paused':st==='FINISHED'?'finished':st==='IN_PLAY'?'':'other'),liveText(m));n.dataset.liveId=String(m.id);return n}
-function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/(\d+)-(\d+)/)||(m.ia||'').match(/(\d)-(\d)/),ci=conf(m,pk),cf=['Confiance '+ci,ci>=65?'g':ci>=40?'y':''];
+function card(m){const [k,pk]=pick(m),c=chk(m),o25p=marketAwareOver25(m),sc=(m.scs?m.scs[0][0]:'').match(/(\d+)-(\d+)/)||(m.ia||'').match(/(\d)-(\d)/),ci=conf(m,pk),cf=['Confiance '+ci,ci>=65?'g':ci>=40?'y':''];
  const ring=h('div','ring',null,h('b',null,sc?sc[1]+' : '+sc[2]:'–'),h('span','pr','PRONO '+X(k)));ring.style.cssText='--p:'+Math.round(pk*100);
  const mp=marketAware1x2(m),B=(l,p,on)=>h('div','btn'+(on?' on':''),null,h('small',null,l),h('b',null,pc(p))),
   DC=[['1X',mp[0]+mp[1],'1N'],['X2',mp[1]+mp[2],'N2'],['1/2',mp[0]+mp[2],'12']].map(([l,p,c])=>h('div','tag'+(k==c?' on':''),l+' '+pc(p)));
@@ -219,9 +220,9 @@ function card(m){const [k,pk]=pick(m),c=chk(m),sc=(m.scs?m.scs[0][0]:'').match(/
   h('div','row3 dc',null,...DC),
   h('div','gg',null,h('div','tag'+(m.btts>=.5?' on':''),'BTTS OUI '+pc(m.btts)),h('div','tag'+(m.btts<.5?' on':''),'BTTS NON '+pc(1-m.btts))));
  e.dataset.matchId=String(m.id);const live=liveNode(m);if(live)e.appendChild(live);
- if(m.o25!=null)e.appendChild(m.o15!=null?h('div','gg',null,h('div','tag'+(m.o15>=.5?' on':''),'+1,5 BUTS '+pc(m.o15)),h('div','tag'+(m.o25>=.5?' on':''),'+2,5 BUTS '+pc(m.o25))):h('div','gg',null,h('div','tag'+(m.o25>=.5?' on':''),'+2,5 BUTS '+pc(m.o25)),h('div','tag'+(m.o25<.5?' on':''),'-2,5 BUTS '+pc(1-m.o25))));
+ if(m.o25!=null)e.appendChild(m.o15!=null?h('div','gg',null,h('div','tag'+(m.o15>=.5?' on':''),'+1,5 BUTS '+pc(m.o15)),h('div','tag'+(o25p>=.5?' on':''),'+2,5 BUTS '+pc(o25p))):h('div','gg',null,h('div','tag'+(m.o25>=.5?' on':''),'+2,5 BUTS '+pc(m.o25)),h('div','tag'+(o25p<.5?' on':''),'-2,5 BUTS '+pc(1-o25p))));
  const add=(l,kd,sd,p,lab)=>{const b=h('button','addb'+(hasBet(m,kd,sd)?' done':''),(hasBet(m,kd,sd)?'✓ ':'➕ ')+l);b.onclick=()=>addBet(m,kd,sd,lab,p);return b};
- e.appendChild(h('div','row3',null,add(X(k),'x2',k,pk,'Résultat '+X(k)),add('BTTS '+(m.btts>=.5?'oui':'non'),'btts',m.btts>=.5?'oui':'non',Math.max(m.btts,1-m.btts),'BTTS '+(m.btts>=.5?'oui':'non')),m.o25!=null?add(m.o25>=.5?'+2,5':'-2,5','o25',m.o25>=.5?'plus':'moins',Math.max(m.o25,1-m.o25),(m.o25>=.5?'+2,5':'-2,5')+' buts'):h('div',null,'')));
+ e.appendChild(h('div','row3',null,add(X(k),'x2',k,pk,'Résultat '+X(k)),add('BTTS '+(m.btts>=.5?'oui':'non'),'btts',m.btts>=.5?'oui':'non',Math.max(m.btts,1-m.btts),'BTTS '+(m.btts>=.5?'oui':'non')),m.o25!=null?add(m.o25>=.5?'+2,5':'-2,5','o25',m.o25>=.5?'plus':'moins',Math.max(o25p,1-o25p),(m.o25>=.5?'+2,5':'-2,5')+' buts'):h('div',null,'')));
  if(m.scs)e.appendChild(h('p','ia','🎯 Scores probables : '+m.scs.map(([x,p])=>x+' ('+pc(p)+')').join(' · ')));
  if(m.aiWhy)e.appendChild(h('p','ia','🧠 Mon analyse · confiance '+(m.aiConfidence||'–')+'/100 : '+m.aiWhy+(m.aiRisk?' Risque : '+m.aiRisk:'')));
  if(m.mk)e.appendChild(h('p','ia','💹 Probabilités 70 % marché bookmakers / 30 % modèle statistique'+(vb?' · écart favorable détecté sur au moins un résultat (💎 Value)':'')));
@@ -355,8 +356,8 @@ function nations(){const L=M.filter(m=>m.lg===NLG&&m.d>=TD).sort((a,b)=>(a.d+a.h
 const dlabel=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(TD+'T12:00:00'))/864e5);return n==-2?'Avant-hier':n==-1?'Hier':n==0?'Aujourd’hui':n==1?'Demain':new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'})};
 function dayTabs(){const past=[-2,-1].map(dayStr).filter(d=>M.some(m=>m.d===d)),fut=[...new Set(M.filter(m=>m.d>=TD).map(m=>m.d))].sort().slice(0,3);
  [...past,...fut].forEach(d=>{const b=h('button',day==d?'on':'',dlabel(d));b.onclick=()=>{day=d;F.lg='';render()};$('tabs').appendChild(b)})}
-function pickRow(m){const p=marketAware1x2(m),op=[['x2:1','Victoire '+teamName(m.home),p[0]],['x2:N','Match nul',p[1]],['x2:2','Victoire '+teamName(m.away),p[2]],['x2:1N','1X : '+teamName(m.home)+' ou nul',p[0]+p[1]],['x2:N2','X2 : '+teamName(m.away)+' ou nul',p[1]+p[2]],['x2:12','1/2 : pas de nul',p[0]+p[2]],['btts:oui','BTTS oui',m.btts],['btts:non','BTTS non',1-m.btts]];
- if(m.o15!=null)op.push(['o15:plus','+1,5 buts',m.o15]);if(m.o25!=null)op.push(['o25:plus','+2,5 buts',m.o25],['o25:moins','-2,5 buts',1-m.o25]);
+function pickRow(m){const p=marketAware1x2(m),o25p=marketAwareOver25(m),op=[['x2:1','Victoire '+teamName(m.home),p[0]],['x2:N','Match nul',p[1]],['x2:2','Victoire '+teamName(m.away),p[2]],['x2:1N','1X : '+teamName(m.home)+' ou nul',p[0]+p[1]],['x2:N2','X2 : '+teamName(m.away)+' ou nul',p[1]+p[2]],['x2:12','1/2 : pas de nul',p[0]+p[2]],['btts:oui','BTTS oui',m.btts],['btts:non','BTTS non',1-m.btts]];
+ if(m.o15!=null)op.push(['o15:plus','+1,5 buts',m.o15]);if(m.o25!=null)op.push(['o25:plus','+2,5 buts',o25p],['o25:moins','-2,5 buts',1-o25p]);
  const sel=h('select','inp');op.forEach(([v,t,p])=>{const o=h('option',null,t+' · '+pc(p));o.value=v;sel.appendChild(o)});sel.value='x2:'+m.fin;
  const b=h('button','addb','➕ Ajouter');b.onclick=()=>{const o=op.find(x=>x[0]===sel.value),[kd,sd]=sel.value.split(':');addBet(m,kd,sd,o[1],o[2])};
  return h('div','card',null,h('div','mu',m.lg+' · '+m.h),h('div','ttl',nm(m)),h('div','gg',null,sel,b))}
