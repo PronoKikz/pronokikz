@@ -220,9 +220,9 @@ function card(m){const [k,pk]=pick(m),c=chk(m),o25p=marketAwareOver25(m),sc=(m.s
   h('div','row3 dc',null,...DC),
   h('div','gg',null,h('div','tag'+(m.btts>=.5?' on':''),'BTTS OUI '+pc(m.btts)),h('div','tag'+(m.btts<.5?' on':''),'BTTS NON '+pc(1-m.btts))));
  e.dataset.matchId=String(m.id);const live=liveNode(m);if(live)e.appendChild(live);
- if(m.o25!=null)e.appendChild(m.o15!=null?h('div','gg',null,h('div','tag'+(m.o15>=.5?' on':''),'+1,5 BUTS '+pc(m.o15)),h('div','tag'+(o25p>=.5?' on':''),'+2,5 BUTS '+pc(o25p))):h('div','gg',null,h('div','tag'+(m.o25>=.5?' on':''),'+2,5 BUTS '+pc(m.o25)),h('div','tag'+(o25p<.5?' on':''),'-2,5 BUTS '+pc(1-o25p))));
+ if(m.o25!=null)e.appendChild(m.o15!=null?h('div','gg',null,h('div','tag'+(m.o15>=.5?' on':''),'+1,5 BUTS '+pc(m.o15)),h('div','tag'+(o25p>=.5?' on':''),'+2,5 BUTS '+pc(o25p))):h('div','gg',null,h('div','tag'+(o25p>=.5?' on':''),'+2,5 BUTS '+pc(o25p)),h('div','tag'+(o25p<.5?' on':''),'-2,5 BUTS '+pc(1-o25p))));
  const add=(l,kd,sd,p,lab)=>{const b=h('button','addb'+(hasBet(m,kd,sd)?' done':''),(hasBet(m,kd,sd)?'✓ ':'➕ ')+l);b.onclick=()=>addBet(m,kd,sd,lab,p);return b};
- e.appendChild(h('div','row3',null,add(X(k),'x2',k,pk,'Résultat '+X(k)),add('BTTS '+(m.btts>=.5?'oui':'non'),'btts',m.btts>=.5?'oui':'non',Math.max(m.btts,1-m.btts),'BTTS '+(m.btts>=.5?'oui':'non')),m.o25!=null?add(m.o25>=.5?'+2,5':'-2,5','o25',m.o25>=.5?'plus':'moins',Math.max(o25p,1-o25p),(m.o25>=.5?'+2,5':'-2,5')+' buts'):h('div',null,'')));
+ e.appendChild(h('div','row3',null,add(X(k),'x2',k,pk,'Résultat '+X(k)),add('BTTS '+(m.btts>=.5?'oui':'non'),'btts',m.btts>=.5?'oui':'non',Math.max(m.btts,1-m.btts),'BTTS '+(m.btts>=.5?'oui':'non')),m.o25!=null?add(o25p>=.5?'+2,5':'-2,5','o25',o25p>=.5?'plus':'moins',Math.max(o25p,1-o25p),(o25p>=.5?'+2,5':'-2,5')+' buts'):h('div',null,'')));
  if(m.scs)e.appendChild(h('p','ia','🎯 Scores probables : '+m.scs.map(([x,p])=>x+' ('+pc(p)+')').join(' · ')));
  if(m.aiWhy)e.appendChild(h('p','ia','🧠 Mon analyse · confiance '+(m.aiConfidence||'–')+'/100 : '+m.aiWhy+(m.aiRisk?' Risque : '+m.aiRisk:'')));
  if(m.mk)e.appendChild(h('p','ia','💹 Probabilités 70 % marché bookmakers / 30 % modèle statistique'+(vb?' · écart favorable détecté sur au moins un résultat (💎 Value)':'')));
