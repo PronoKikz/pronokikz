@@ -397,6 +397,68 @@ function applyExperts(m){const e=EXPL.find(x=>same(m.home,x.h)&&same(m.away,x.a)
  } catch(e) {
   console.log('Ligue des nations UEFA indisponible pour cette mise à jour : '+e.message);
  }
+ // UEFA Europa League et Conference League : calendrier, scores et pronostics via ESPN.
+ // Les probabilités utilisent les résultats de la phase de ligue, avec lissage pour les petits échantillons.
+ try {
+  const seasonStart=new Date().getMonth()>=6?new Date().getFullYear():new Date().getFullYear()-1;
+  const nextYear=seasonStart+1;
+  const competitions=[
+   {slug:'uefa.europa',prefix:'uel-',name:'Ligue Europa',dates:['0916','0917','1015','1022','1105','1126','1210'].map(x=>String(seasonStart)+x).concat([String(nextYear)+'0121',String(nextYear)+'0128'])},
+   {slug:'uefa.europa.conf',prefix:'uecl-',name:'Ligue Conférence',dates:['1015','1022','1105','1126','1210','1217'].map(x=>String(seasonStart)+x)}
+  ];
+  let europeanOdds=[];
+  if(OD){try{europeanOdds=await oddsFor('EUROPA')}catch(e){console.log('Cotes UEFA : '+e.message)}}
+  for(const competition of competitions){
+   const packs=await Promise.all(competition.dates.map(async date=>{
+    try{const response=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+competition.slug+'/scoreboard?dates='+date+'&limit=500',{headers:{Accept:'application/json'}});
+     if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();return Array.isArray(json.events)?json.events:[];
+    }catch(e){console.log(competition.name+' ESPN '+date+' : '+e.message);return []}
+   }));
+   const events=[...new Map(packs.flat().map(e=>[String(e.id),e])).values()];
+   const parsed=events.map(event=>{
+    const comp=(event.competitions||[])[0],teams=comp&&comp.competitors||[],home=teams.find(t=>t.homeAway==='home'),away=teams.find(t=>t.homeAway==='away');
+    if(!home||!away||!home.team||!away.team||!event.date)return null;
+    const status=(comp&&comp.status&&comp.status.type)||(event.status&&event.status.type)||{},done=!!status.completed;
+    const hs=home.score==null?null:Number(home.score),as=away.score==null?null:Number(away.score);
+    const clock=comp&&comp.status&&comp.status.displayClock||'',description=String(status.description||''),state=String(status.state||'');
+    const minuteMatch=String(clock).match(/^(\\d+)/),liveMinute=minuteMatch?Number(minuteMatch[1]):null;
+    const liveStatus=done?'FINISHED':/postponed/i.test(description)?'POSTPONED':/cancelled|canceled/i.test(description)?'CANCELLED':/half.?time|halftime/i.test(description)?'PAUSED':state==='in'?'IN_PLAY':state==='pre'?'TIMED':null;
+    return {event,home,away,done,hs,as,date:new Date(event.date),homeName:home.team.displayName||home.team.name||'Domicile',awayName:away.team.displayName||away.team.name||'Extérieur',liveStatus,liveMinute};
+   }).filter(e=>e&&Number.isFinite(e.date.getTime()));
+   const form={},team=name=>form[name]||(form[name]={gf:0,ga:0,n:0});let totalGoals=0,totalWeight=0;
+   parsed.filter(e=>e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)).sort((a,b)=>a.date-b.date).forEach(e=>{
+    const weight=Math.pow(.5,Math.max(0,(Date.now()-e.date.getTime())/864e5)/70),h=team(e.home.team.id),a=team(e.away.team.id);
+    h.gf+=weight*e.hs;h.ga+=weight*e.as;h.n+=weight;a.gf+=weight*e.as;a.ga+=weight*e.hs;a.n+=weight;
+    totalGoals+=weight*(e.hs+e.as);totalWeight+=weight;
+   });
+   const avgGoals=totalWeight?totalGoals/(2*totalWeight):1.35,oldComp=Object.fromEntries(prev.filter(m=>String(m.id).startsWith(competition.prefix)).map(m=>[String(m.id),m]));
+   let added=0,marketMatched=0;
+   for(const e of parsed){
+    const d=day(e.date);if(d<day(off(-14))||d>day(off(45)))continue;
+    const id=competition.prefix+e.event.id,oldMatch=oldComp[id],started=e.date.getTime()<=Date.now()||e.liveStatus==='IN_PLAY'||e.done;
+    if(started&&!oldMatch)continue;
+    const H=form[e.home.team.id]||{gf:0,ga:0,n:0},A=form[e.away.team.id]||{gf:0,ga:0,n:0};
+    const smooth=(value,n)=>((value||0)+avgGoals*3)/(n+3),clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+    const lh=clamp(avgGoals*1.08*(smooth(H.gf,H.n)/avgGoals)*(smooth(A.ga,A.n)/avgGoals),.25,3.8);
+    const la=clamp(avgGoals*.92*(smooth(A.gf,A.n)/avgGoals)*(smooth(H.ga,H.n)/avgGoals),.25,3.8);
+    const px=model(lh,la),prob=adj1x2(px,TT).map(r3),score=e.done&&Number.isFinite(e.hs)&&Number.isFinite(e.as)?[e.hs,e.as]:null;
+    let m={id,lg:competition.name,home:e.homeName,away:e.awayName,d,h:new Intl.DateTimeFormat('fr-FR',{...tz,hour:'2-digit',minute:'2-digit'}).format(e.date),
+     hc:e.home.team.logo||'',ac:e.away.team.logo||'',p1:prob[0],pN:prob[1],p2:prob[2],btts:r3(px.btts),o25:r3(px.o25),o15:r3(px.o15),scs:px.scs,
+     x:[r3(lh),r3(la)],fm:[H.n,A.n],ng:[H.n,A.n],r:score,lock:started?1:0,raw:{p1:prob[0],pN:prob[1],p2:prob[2],o25:r3(px.o25)},b0:prob.slice(),
+     ia:'Pronostic statistique ESPN : résultats de la phase de ligue, buts marqués/encaissés et avantage du terrain. '+(Math.min(H.n,A.n)<3?'Échantillon limité : estimation indicative, confiance réduite.':'Forme issue des matchs européens déjà joués.'),pt:new Date().toISOString()};
+    if(started&&oldMatch){
+     m={...m,...oldMatch,d,h:m.h,r:score||oldMatch.r||null,lock:1};
+     if(e.liveStatus){m.liveStatus=e.liveStatus;m.liveScore=score||(oldMatch.liveScore||null);m.liveMinute=e.liveStatus==='IN_PLAY'?e.liveMinute:null;m.liveAdded=null;m.liveUpdatedAt=new Date().toISOString();m.liveSource='ESPN'}
+    }else{
+     const ev=findOddsMatch(europeanOdds,e.homeName,e.awayName);
+     if(ev){m=blendMarketOdds(m,ev,.70);marketMatched++}else if(OD)m.marketStatus='unmatched';
+     m=applyExperts(m);
+    }
+    out.push(m);seen.add(id);added++;
+   }
+   console.log(competition.name+' : '+parsed.length+' événements ESPN, '+parsed.filter(e=>e.done).length+' terminés, '+added+' matchs ajoutés, '+marketMatched+' cotes 1N2 associées.');
+  }
+ }catch(e){console.log('Compétitions UEFA indisponibles pour cette mise à jour : '+e.message)}
  // Matchs manuels : intégrer les rencontres déclarées dans expert.js, absentes des flux API.
  for(const extra of MANUAL_EXTRA){
   if(!extra||!extra.id||!extra.d||extra.d<from||extra.d>last)continue;
