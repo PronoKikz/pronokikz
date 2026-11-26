@@ -160,20 +160,23 @@ function safeCands(open){
  ranked.sort((a,b)=>b.p-a.p);
  return diversify(ranked,6)
 }
-function dailyComboCands(open,minP,maxP,maxLegs,target){
- const pool=beam(open,.65,maxLegs,allLegs).filter(x=>x.l.length>=2&&x.p>=minP&&x.p<=maxP);
- pool.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target)||a.l.length-b.l.length);
- return diversify(pool,8);
+function comboLegs(m){
+ const out=allLegs(m).filter(x=>x.kd==='x2'&&x.p>=.56&&x.p<=.88);
+ const o25=marketAwareOver25(m);
+ if(m.mkOdds&&m.mkOdds.totals&&m.mkOdds.totals.over25&&m.mkOdds.totals.under25&&Number.isFinite(o25)){
+  if(o25>=.56&&o25<=.88)out.push(mk(m,'+2,5 buts',o25,'o25','plus'));
+  if(1-o25>=.56&&1-o25<=.88)out.push(mk(m,'-2,5 buts',1-o25,'o25','moins'));
+ }
+ return out;
+}
+function dailyComboCands(open,minP,maxP,maxLegs,target,minLegs){
+ const pool=beam(open,.65,maxLegs,comboLegs).filter(x=>x.l.length>=(minLegs||2)&&x.p>=minP&&x.p<=maxP);
+ pool.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target)||b.l.length-a.l.length);
+ return diversify(pool,3);
 }
 function comboSection(title,cls,items,note){
- if(!items.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',title),h('p','ia','Pas assez de sélections cohérentes pour construire un combiné à cote théorique supérieure ou égale à 2. Je préfère ne pas forcer un ticket.')));return}
- let index=0,current=null;
- const draw=()=>{const item=items[index],next=items.length>1?()=>{index=(index+1)%items.length;draw()}:null;
-  const fresh=box(cls,title+' · '+(index+1)+'/'+items.length,item.l,note,next,'voir un autre');
-  if(current)current.replaceWith(fresh);
-  current=fresh;
- };
- draw();
+ if(!items.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',title),h('p','ia','Aucun combiné suffisamment cohérent dans cette fourchette aujourd’hui. Je préfère ne pas inventer de sélection.')));return}
+ items.forEach((item,i)=>box(cls,title+' · ticket '+(i+1),item.l,note));
 }
 function valueCands(open){return targetCands(open,1/6,.14,.20,allLegs)}
 function funCands(open){return targetCands(open,.025,.02,.03,allLegs)}
@@ -391,8 +394,9 @@ function render(){
  if(view==='d'||view==='m'){
   const upcoming=dm.filter(m=>isOpen(m)&&m.p1!=null&&m.pN!=null&&m.p2!=null);
   if(upcoming.length>=2){
-   comboSection('⭐ PRONO PRINCIPAL · COMBINÉ', 'tip', dailyComboCands(upcoming,.25,.48,4,.36), '2 à 4 sélections : priorité aux probabilités les plus solides, avec une cote théorique totale d’au moins 2.');
-   comboSection('🔥 PRONO ALTERNATIF · COMBINÉ', 'fun', dailyComboCands(upcoming,.10,.25,5,.18), 'Combiné plus ambitieux : 2 à 5 sélections, cote théorique généralement plus élevée et risque supérieur.');
+   comboSection('⭐ PRONO PRINCIPAL · 3 COMBINÉS', 'tip', dailyComboCands(upcoming,.28,.48,3,.38,2), '2 à 3 sélections solides, cote théorique visée autour de 2,10 à 3,55. Les marchés 1X2/double chance et buts avec cotes disponibles sont privilégiés.');
+   comboSection('🔥 PRONO ALTERNATIF · 3 COMBINÉS', 'fun', dailyComboCands(upcoming,.12,.28,4,.20,2), '2 à 4 sélections, cote théorique visée autour de 3,60 à 8,30 : plus risqué, mais construit avec des probabilités vérifiables.');
+   comboSection('💥 GROSSE COTE · 3 COMBINÉS', 'c2', dailyComboCands(upcoming,.045,.12,5,.075,3), '3 à 5 sélections, cote théorique visée autour de 8,30 à 22,00. Ticket spéculatif : aucune sélection isolée à très faible probabilité.');
   }
  }
  const fn=dm.map(chk).filter(Boolean),wins=fn.filter(x=>x.r).length,losses=fn.length-wins;
