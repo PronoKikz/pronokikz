@@ -257,40 +257,43 @@ const buildInstinctPick = (matches: Match[], seed: number): Combo | null => {
 const buildDailyQualityPicks = (matches: Match[], offsets: Record<number,number>, maxPicks = 3) => {
  const candidates: ComboPick[] = [];
  matches.forEach(m => {
+  // Les conseils sont réservés aux marchés réels et aux cotes bookmakers récentes.
   if(!hasFreshMarketOdds(m,12)) return;
   const [p1,pN,p2]=effective1x2(m);
-  const quotes=[m.mkOdds?.h2h?.home,m.mkOdds?.h2h?.draw,m.mkOdds?.h2h?.away];
-  if(!quotes.every(q=>q&&Number.isFinite(q.price)&&q.price>1)) return;
-  const implied=quotes.map(q=>1/(q!.price)),sum=implied.reduce((a,b)=>a+b,0);
-  if(!sum) return;
-  const advised=normalizeSelection(m.fin);
-  const selection=['1','N','2','1N','N2','2N','12'].includes(advised)?(advised==='2N'?'N2':advised):(['1','N','2'][[p1,pN,p2].indexOf(Math.max(p1,pN,p2))]||'');
-  if(!selection) return;
-  const included=selection.split('');
-  const probability=(included.includes('1')?p1:0)+(included.includes('N')?pN:0)+(included.includes('2')?p2:0);
-  const marketProbability=included.reduce((total,key)=>total+implied[['1','N','2'].indexOf(key)]/sum,0);
-  const selectedImplied=included.reduce((total,key)=>total+implied[['1','N','2'].indexOf(key)],0);
-  if(!selectedImplied) return;
-  const odds=selection.length===1?quotes[['1','N','2'].indexOf(selection)]!.price:sum/selectedImplied;
-  const isDouble=selection.length===2;
-  const minProbability=isDouble?0.72:0.68;
-  const maxOdds=isDouble?2.5:2.8;
-  if(probability<minProbability||probability>0.95||odds<1.2||odds>maxOdds) return;
-  // Écarter les pronostics dont le modèle est trop éloigné du marché sans explication.
-  const edge=probability-marketProbability;
-  if(edge < -0.08) return;
   const base={id:String(m.id),match:(m.home||'?')+' – '+(m.away||'?'),league:m.lg||'Compétition',kickoff:dateLabel(m.d,m.h)};
-  const label=selection.length===1
-   ? selection==='1'?'Victoire domicile (1)':selection==='N'?'Match nul (N)':'Victoire extérieur (2)'
-   : 'Double chance '+selection.split('').join('/');
-  candidates.push({...base,market:label,probability,odds,bookmaker:selection.length===1?quotes[['1','N','2'].indexOf(selection)]!.bookmaker:'Cote estimée depuis le marché 1N2',oddsAt:m.mkOddsAt,estimated:isDouble,edge});
+  const add=(market:string,probability:number,quote?:{price:number;bookmaker:string},marketProbability?:number)=>{
+   if(!quote||!Number.isFinite(quote.price)||quote.price<2||quote.price>6)return;
+   if(!Number.isFinite(probability)||probability<0.48||probability>0.85||!Number.isFinite(marketProbability))return;
+   const edge=probability-marketProbability!;
+   const expectedValue=probability*quote.price-1;
+   // Double validation : avantage du modèle sur le marché + rendement théorique positif.
+   if(edge<0.035||expectedValue<0.04)return;
+   candidates.push({...base,market,probability,odds:quote.price,bookmaker:quote.bookmaker,oddsAt:m.mkOddsAt,edge});
+  };
+  const quotes=[m.mkOdds?.h2h?.home,m.mkOdds?.h2h?.draw,m.mkOdds?.h2h?.away];
+  if(quotes.every(q=>q&&Number.isFinite(q.price)&&q.price>1)){
+   const implied=quotes.map(q=>1/q!.price),sum=implied.reduce((a,b)=>a+b,0);
+   if(sum>0){
+    add('Victoire domicile (1)',p1,quotes[0],implied[0]/sum);
+    add('Match nul (N)',pN,quotes[1],implied[1]/sum);
+    add('Victoire extérieur (2)',p2,quotes[2],implied[2]/sum);
+   }
+  }
+  const addBinary=(label:string,probability:number,yes?:{price:number;bookmaker:string},no?:{price:number;bookmaker:string})=>{
+   if(!yes||!no||yes.price<=1||no.price<=1)return;
+   const iy=1/yes.price,inn=1/no.price,total=iy+inn;
+   if(total<=0)return;
+   add(label,probability,yes,iy/total);
+   add(label.replace('OUI','NON'),1-probability,no,inn/total);
+  };
+  if(m.o25!=null)addBinary('Plus de 2,5 buts',m.o25,m.mkOdds?.totals?.over25,m.mkOdds?.totals?.under25);
+  if(m.btts!=null)addBinary('Les 2 équipes marquent : OUI',m.btts,m.mkOdds?.btts?.yes,m.mkOdds?.btts?.no);
  });
- candidates.sort((a,b)=>b.probability-a.probability||(b.edge||0)-(a.edge||0)||a.odds-b.odds);
+ candidates.sort((a,b)=>b.probability-a.probability||(b.edge||0)-(a.edge||0)||(b.probability*b.odds-a.probability*a.odds));
  const selected: ComboPick[]=[];
- for(let i=0;i<maxPicks&&candidates.length;i++){
-  let index=(i+(offsets[i]||0))%candidates.length;
-  let candidate=candidates[index],attempts=0;
-  while(selected.some(p=>p.id===candidate.id)&&attempts<candidates.length){index=(index+1)%candidates.length;candidate=candidates[index];attempts++;}
+ for(let i=0;i<candidates.length&&selected.length<maxPicks;i++){
+  const index=(i+(offsets[selected.length]||0))%candidates.length;
+  const candidate=candidates[index];
   if(!selected.some(p=>p.id===candidate.id))selected.push(candidate);
  }
  return selected.map((pick,index)=>({id:'quality-'+index+'-'+pick.id+'-'+pick.market,combo:{picks:[pick],odds:pick.odds,probability:pick.probability}}));
@@ -298,23 +301,31 @@ const buildDailyQualityPicks = (matches: Match[], offsets: Record<number,number>
 
 
 const buildDailyParlay = (matches: Match[], seed: number, count: number): Combo | null => {
- const offsets:Record<number,number>={};
- for(let i=0;i<count;i++)offsets[i]=seed;
- const candidates=buildDailyQualityPicks(matches,offsets,count)
+ const candidates=buildDailyQualityPicks(matches,{},100)
   .flatMap(item=>item.combo.picks)
   .sort((a,b)=>b.probability-a.probability||(b.edge||0)-(a.edge||0));
- const picks:ComboPick[]=[];
- for(const pick of candidates){
-  if(picks.some(item=>item.id===pick.id))continue;
-  picks.push(pick);
-  if(picks.length===count)break;
- }
- if(picks.length!==count)return null;
- const odds=picks.reduce((total,pick)=>total*pick.odds,1);
- const probability=picks.reduce((total,pick)=>total*pick.probability,1);
- const maxOdds=count===2?4.5:count===3?8:12;
- if(!Number.isFinite(odds)||odds<2||odds>maxOdds)return null;
- return {picks,odds,probability};
+ if(candidates.length<count)return null;
+ const targetMin=count===4?18:count===3?7.5:3.8;
+ const targetMax=count===4?22:count===3?16:12;
+ const pool=candidates.slice(0,24),valid:Combo[]=[];
+ const walk=(start:number,picks:ComboPick[],odds:number,probability:number)=>{
+  if(picks.length===count){
+   if(odds>=targetMin&&odds<=targetMax)valid.push({picks:[...picks],odds,probability});
+   return;
+  }
+  for(let i=start;i<pool.length;i++){
+   const pick=pool[i];
+   if(picks.some(item=>item.id===pick.id))continue;
+   const nextOdds=odds*pick.odds;
+   if(nextOdds>targetMax)continue;
+   walk(i+1,[...picks,pick],nextOdds,probability*pick.probability);
+  }
+ };
+ walk(0,[],1,1);
+ if(!valid.length)return null;
+ valid.sort((a,b)=>b.probability-a.probability||Math.abs(a.odds-(count===4?20:targetMin+targetMax)/2)-Math.abs(b.odds-(count===4?20:targetMin+targetMax)/2));
+ const top=valid.slice(0,Math.min(8,valid.length));
+ return top[Math.abs(Math.trunc(seed))%top.length];
 };
 
 export default function App() {
