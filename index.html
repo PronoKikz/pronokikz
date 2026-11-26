@@ -160,20 +160,21 @@ function safeCands(open){
  ranked.sort((a,b)=>b.p-a.p);
  return diversify(ranked,6)
 }
-function comboLegs(m){
- const out=allLegs(m).filter(x=>x.kd==='x2'&&x.p>=.56&&x.p<=.88);
- const o25=marketAwareOver25(m);
- if(m.mkOdds&&m.mkOdds.totals&&m.mkOdds.totals.over25&&m.mkOdds.totals.under25&&Number.isFinite(o25)){
-  if(o25>=.56&&o25<=.88)out.push(mk(m,'+2,5 buts',o25,'o25','plus'));
-  if(1-o25>=.56&&1-o25<=.88)out.push(mk(m,'-2,5 buts',1-o25,'o25','moins'));
+function comboLegs(m,minLegP){
+ const hasMarket=Array.isArray(m.mkp)&&m.mkp.length===3&&m.mkp.every(x=>Number.isFinite(x)&&x>0)||!!(m.mkOdds&&m.mkOdds.h2h&&m.mkOdds.h2h.home&&m.mkOdds.h2h.draw&&m.mkOdds.h2h.away);
+ const out=hasMarket?allLegs(m).filter(x=>x.kd==='x2'&&x.p>=minLegP&&x.p<=.90):[];
+ const t=m.mkOdds&&m.mkOdds.totals,o25=marketAwareOver25(m);
+ if(t&&t.over25&&t.under25&&Number.isFinite(o25)){
+  if(o25>=minLegP&&o25<=.90)out.push(mk(m,'+2,5 buts',o25,'o25','plus'));
+  if(1-o25>=minLegP&&1-o25<=.90)out.push(mk(m,'-2,5 buts',1-o25,'o25','moins'));
  }
  return out;
 }
-function dailyComboCands(open,minP,maxP,maxLegs,target,minLegs){
+function dailyComboCands(open,minP,maxP,maxLegs,minLegP,minLegs){
  let states=[{l:[],p:1}],pool=[];
  const required=minLegs||2;
  open.forEach(m=>{
-  const next=states.slice(),opts=comboLegs(m);
+  const next=states.slice(),opts=comboLegs(m,minLegP);
   states.forEach(s=>{
    if(s.l.length>=maxLegs)return;
    opts.forEach(o=>{
@@ -184,10 +185,11 @@ function dailyComboCands(open,minP,maxP,maxLegs,target,minLegs){
     if(n.l.length>=required&&p<=maxP)pool.push(n);
    });
   });
-  states=next.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target)).slice(0,1800);
+  states=next.sort((a,b)=>b.p-a.p).slice(0,1800);
  });
- pool.sort((a,b)=>Math.abs(a.p-target)-Math.abs(b.p-target)||b.l.length-a.l.length);
- return diversify(pool.slice(0,400),3);
+ // Priorité au ticket qui a la meilleure probabilité estimée, sans dépasser la cote cible.
+ pool.sort((a,b)=>b.p-a.p||a.l.length-b.l.length);
+ return diversify(pool.slice(0,500),3);
 }
 function comboSection(title,cls,items,note){
  if(!items.length){A.appendChild(h('div','card '+cls,null,h('div','ttl',title),h('p','ia','Aucun combiné suffisamment cohérent dans cette fourchette aujourd’hui. Je préfère ne pas inventer de sélection.')));return}
@@ -409,9 +411,9 @@ function render(){
  if(view==='d'||view==='m'){
   const upcoming=dm.filter(m=>isOpen(m)&&m.p1!=null&&m.pN!=null&&m.p2!=null);
   if(upcoming.length>=2){
-   comboSection('⭐ PRONO PRINCIPAL · 3 COMBINÉS', 'tip', dailyComboCands(upcoming,.28,.48,3,.38,2), '2 à 3 sélections solides, cote théorique visée autour de 2,10 à 3,55. Les marchés 1X2/double chance et buts avec cotes disponibles sont privilégiés.');
-   comboSection('🔥 PRONO ALTERNATIF · 3 COMBINÉS', 'fun', dailyComboCands(upcoming,.12,.28,4,.20,2), '2 à 4 sélections, cote théorique visée autour de 3,60 à 8,30 : plus risqué, mais construit avec des probabilités vérifiables.');
-   comboSection('💥 GROSSE COTE · 3 COMBINÉS', 'c2', dailyComboCands(upcoming,.045,.12,5,.075,3), '3 à 5 sélections, cote théorique visée autour de 8,30 à 22,00. Ticket spéculatif : aucune sélection isolée à très faible probabilité.');
+   comboSection('⭐ PRONO PRINCIPAL · 3 COMBINÉS', 'tip', dailyComboCands(upcoming,.30,.50,3,.65,2), 'Priorité absolue à la probabilité de réussite : 2 à 3 sélections, chaque choix doit atteindre au moins 65 %. Cote totale théorique supérieure à 2. Aucun ticket forcé.');
+   comboSection('🔥 PRONO ALTERNATIF · 3 COMBINÉS', 'fun', dailyComboCands(upcoming,.12,.30,4,.60,2), 'Risque supérieur : 2 à 4 sélections, chaque choix doit atteindre au moins 60 %. Le ticket est retenu pour sa probabilité, pas pour gonfler artificiellement la cote.');
+   comboSection('💥 GROSSE COTE · 3 COMBINÉS', 'c2', dailyComboCands(upcoming,.045,.15,5,.58,3), 'Ticket spéculatif de 3 à 5 sélections, chacune à au moins 58 %. La probabilité de réussite reste faible : mise réduite, jamais un pari sûr.');
   }
  }
  const fn=dm.map(chk).filter(Boolean),wins=fn.filter(x=>x.r).length,losses=fn.length-wins;
